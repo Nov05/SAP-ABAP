@@ -135,6 +135,7 @@ FORM  DOI_CREATE_CONTROL.
 *  APPEND ERROR TO ERRORS.
 
 ENDFORM.              " CREATE_BASIC_OBJECTS
+
 **********************************************************************
 * FORM    :  DOI_SAVE_DOCUMENT
 * Created :  30.06.2008 10:06:43
