@@ -1,0 +1,1039 @@
+*----------------------------------------------------------------------*
+*   INCLUDE Z_DOI_INC                                                  *
+*----------------------------------------------------------------------*
+* Templated created by nov05, 2015-07-20
+*----------------------------------------------------------------------*
+* Create Screen 0100, if excel is displayed on a new screen
+*----------------------------------------------------------------------*
+** Screen 0100
+*PROCESS BEFORE OUTPUT.
+*  MODULE STATUS_0100.
+*  MODULE PBO_EXCEL_OUTPUT.
+*
+*PROCESS AFTER INPUT.
+*  MODULE USER_COMMAND_0100.
+*  MODULE EXIT AT EXIT-COMMAND.
+
+*----------------------------------------------------------------------*
+* Create macro in the excel template Module1, if macros are needed.
+*----------------------------------------------------------------------*
+*Sub hide_rows(RowBegin As String, RowEnd As String)
+*    Rows(RowBegin & ":" & RowEnd).Select
+*    Selection.EntireRow.Hidden = True
+*    Range("A1").Select
+*End Sub
+*Sub delete_rows(RowBegin As String, RowEnd As String)
+*    Rows(RowBegin & ":" & RowEnd).Select
+*    Selection.Delete Shift:=xlUp
+*    Range("A1").Select
+*End Sub
+
+*----------------------------------------------------------------------*
+* Type-pools
+*----------------------------------------------------------------------*
+TYPE-POOLS: SLIS,
+            VRM,
+            SBDST,
+            SOI,
+            ABAP.
+*----------------------------------------------------------------------*
+* Global settings and variants
+*----------------------------------------------------------------------*
+DATA:
+* Excel output range
+      GV_TOTAL_COLS TYPE I VALUE 60,
+      GV_TOTAL_ROWS TYPE I,
+* Save to local document extension
+      GV_FILTER TYPE STRING,
+      GV_FILE_EXT TYPE STRING,
+* Display document inside/outside GUI
+      INPLACE(1) TYPE C VALUE 'X',
+* Application
+      GV_APP_NAME(200) TYPE C VALUE 'R/3 Reporter',
+* Transaction [OAOR]
+      DOC_CLASSNAME TYPE SBDST_CLASSNAME VALUE 'ZDOI',
+      DOC_CLASSTYPE TYPE SBDST_CLASSTYPE VALUE 'OT',
+      DOC_OBJECT_KEY TYPE SBDST_OBJECT_KEY VALUE 'ZDOI',
+      DOCUMENT_TYPE(80) VALUE 'Excel.Sheet',
+      GV_TEMPLATE_NAME(30) TYPE C, "Template name
+      G_DEF_ACTIVE_SHEETNAME(50) VALUE 'Sheet1',
+* Basic objects
+      CONTAINER   TYPE REF TO CL_GUI_CUSTOM_CONTAINER,
+      CONTROL     TYPE REF TO I_OI_CONTAINER_CONTROL,
+      DOCUMENT    TYPE REF TO I_OI_DOCUMENT_PROXY,
+      SPREADSHEET TYPE REF TO I_OI_SPREADSHEET,
+      ERROR       TYPE REF TO I_OI_ERROR,
+      ERRORS      TYPE REF TO I_OI_ERROR OCCURS 0,
+      RETCODE     TYPE SOI_RET_STRING.
+
+* Flags
+DATA: DOI_ERROR TYPE C.
+
+* Screens
+DATA: OKCODE TYPE SY-UCOMM.
+
+* [OAOR] objects
+DATA: BDS_INSTANCE TYPE REF TO CL_BDS_DOCUMENT_SET,
+      DOC_SIGNATURE TYPE SBDST_SIGNATURE,
+      DOC_SIGNATURE_WA LIKE LINE OF DOC_SIGNATURE,
+      DOC_COMPONENTS TYPE SBDST_COMPONENTS,
+      DOC_URIS TYPE SBDST_URI,
+      DOC_URIS_WA LIKE LINE OF DOC_URIS,
+      ITEM_URL(256).
+
+* Excel manipulations
+DATA: RANGEITEM TYPE SOI_RANGE_ITEM,
+      RANGES TYPE SOI_RANGE_LIST,
+      EXCEL_INPUT TYPE SOI_GENERIC_TABLE,
+      EXCEL_INPUT_WA TYPE SOI_GENERIC_ITEM.
+
+* Document type
+CONSTANTS: GC_DOCUMENT_TYPE_EXCEL(80) VALUE 'Excel.Sheet'.
+
+* File save to local
+DATA: GV_FILENAME TYPE STRING,    "Excel file export to local
+      GV_PATH TYPE STRING.
+
+* Internal table of excel data
+FIELD-SYMBOLS: <GT_DATA_XLS> TYPE STANDARD TABLE,
+               <GW_DATA_XLS> TYPE ANY,
+               <LINE> TYPE ANY,
+               <FIELD> TYPE ANY.
+
+*---------------------------------------------------------------------*
+*       FORM DOI_CREATE_CONTROL
+*---------------------------------------------------------------------*
+FORM  DOI_CREATE_CONTROL.
+
+  CHECK CONTROL IS INITIAL.
+
+* Get control
+  CALL METHOD
+    C_OI_CONTAINER_CONTROL_CREATOR=>GET_CONTAINER_CONTROL
+    IMPORTING
+      CONTROL = CONTROL
+      ERROR   = ERROR.
+*  APPEND ERROR TO ERRORS.
+
+* Create container
+*  CREATE OBJECT CONTAINER
+*    EXPORTING
+*      CONTAINER_NAME = 'CONTAINER'.
+
+  CALL METHOD CONTROL->INIT_CONTROL
+    EXPORTING
+      R3_APPLICATION_NAME      = GV_APP_NAME
+      INPLACE_ENABLED          = INPLACE
+      INPLACE_SCROLL_DOCUMENTS = 'X'
+*      PARENT                   = CL_GUI_CONTAINER=>SCREEN0
+      PARENT                    = CL_GUI_CUSTOM_CONTAINER=>SCREEN0
+      REGISTER_ON_CLOSE_EVENT  = 'X'
+      REGISTER_ON_CUSTOM_EVENT = 'X'
+      NO_FLUSH                 = 'X'
+    IMPORTING
+      ERROR                    = ERROR.
+*  APPEND ERROR TO ERRORS.
+
+ENDFORM.              " CREATE_BASIC_OBJECTS
+**********************************************************************
+* FORM    :  DOI_SAVE_DOCUMENT
+* Created :  30.06.2008 10:06:43
+**********************************************************************
+FORM DOI_SAVE_DOCUMENT .
+
+  DATA: LV_FNAME TYPE STRING,
+        LV_FPATH TYPE STRING,
+        LV_FULLPATH(100) TYPE C,
+        UACT TYPE I,
+        DOCSAVE TYPE REF TO CL_GUI_FRONTEND_SERVICES,
+        I_RETURN TYPE SOI_RET_STRING,
+        I_ERROR TYPE REF TO I_OI_ERROR,
+        L_LASTDAY TYPE D.
+
+* If download path is not specified, call dialog to ask
+  IF GV_PATH IS INITIAL.
+    CREATE OBJECT DOCSAVE.
+    CALL METHOD DOCSAVE->FILE_SAVE_DIALOG
+      EXPORTING
+        DEFAULT_EXTENSION = ''
+        DEFAULT_FILE_NAME = GV_FILENAME
+        FILE_FILTER       = GV_FILTER
+      CHANGING
+        FILENAME          = LV_FNAME
+        PATH              = GV_PATH
+        FULLPATH          = LV_FPATH
+        USER_ACTION       = UACT.
+
+    IF UACT = DOCSAVE->ACTION_CANCEL.
+      EXIT.
+    ENDIF.
+  ELSE.
+    CONCATENATE GV_PATH GV_FILENAME
+                INTO LV_FPATH.
+  ENDIF. "IF GV_PATH IS INITIAL.
+
+* Process full path
+  WHILE LV_FPATH CS '.'.
+    REPLACE '.' WITH SPACE INTO LV_FPATH.
+    CONDENSE LV_FPATH NO-GAPS.
+  ENDWHILE.
+  GV_FILE_EXT = GV_FILTER.
+  SHIFT GV_FILE_EXT LEFT DELETING LEADING '*'.
+  CONCATENATE LV_FPATH GV_FILE_EXT INTO LV_FULLPATH.
+
+* Save document to full path
+  CALL METHOD DOCUMENT->SAVE_AS
+    EXPORTING
+      FILE_NAME   = LV_FULLPATH
+      NO_FLUSH    = ''
+*       prompt_user = ' '
+    IMPORTING
+      ERROR       = ERROR
+      RETCODE     = RETCODE.
+  PERFORM DOI_ERROR_RAISE_MESSAGE.
+
+ENDFORM. "DOI_SAVE_DOCUMENT
+
+*---------------------------------------------------------------------*
+*       FORM DOI_INSERT_RANGE_DIM
+*---------------------------------------------------------------------*
+FORM DOI_INSERT_RANGE_DIM  USING ROW  TYPE I           "range top row
+                           COLUMN TYPE I         "range left column
+                           ROWS TYPE I           "range row count
+                           COLUMNS TYPE I        "range column count
+                           NAME.                 "range name
+
+* Get a Range Based on its Dimensions
+  CALL METHOD SPREADSHEET->INSERT_RANGE_DIM
+    EXPORTING
+      NAME     = NAME
+*      no_flush = 'X'
+      TOP      = ROW
+      LEFT     = COLUMN
+      ROWS     = ROWS
+      COLUMNS  = COLUMNS
+    IMPORTING
+      ERROR    = ERROR
+      RETCODE  = RETCODE.
+  PERFORM DOI_ERROR_RAISE_MESSAGE.
+
+  CLEAR: RANGEITEM,
+         RANGES[].
+  RANGEITEM-NAME = NAME.
+  RANGEITEM-ROWS = ROWS.
+  RANGEITEM-COLUMNS = COLUMNS.
+  APPEND RANGEITEM TO RANGES.
+
+ENDFORM.                    "DOI_INSERT_RANGE_DIM
+
+**********************************************************************
+* FORM    :  DOI_FILL_EXCEL_INPUT
+* Created :  22.11.2007 09:47:25
+**********************************************************************
+FORM DOI_FILL_EXCEL_INPUT USING   P_ROW "row no in range
+                                  P_COL "column no in range
+                                  P_VAL. "value
+
+  CLEAR EXCEL_INPUT_WA.
+  EXCEL_INPUT_WA-ROW = P_ROW.
+  EXCEL_INPUT_WA-COLUMN = P_COL.
+  EXCEL_INPUT_WA-VALUE = P_VAL.
+  APPEND EXCEL_INPUT_WA TO EXCEL_INPUT.
+
+ENDFORM. "DOI_FILL_EXCEL_INPUT
+**********************************************************************
+* FORM    :  DOI_SET_RANGES_DATA
+* Created :  21.11.2007 15:14:54
+**********************************************************************
+FORM DOI_SET_RANGES_DATA  .
+
+* Set ranges data
+  CALL METHOD SPREADSHEET->SET_RANGES_DATA
+    EXPORTING
+      RANGES   = RANGES
+      CONTENTS = EXCEL_INPUT
+*      no_flush = 'X'
+    IMPORTING
+      ERROR    = ERROR
+      RETCODE  = RETCODE.
+  PERFORM DOI_ERROR_RAISE_MESSAGE.
+
+** Set column width fit the widest cell
+*  CALL METHOD spreadsheet->fit_widest
+*    EXPORTING
+*      name     = space
+*      no_flush = 'X'.
+
+* Delete the definitions of one or more ranges
+  CALL METHOD SPREADSHEET->DELETE_RANGES
+    EXPORTING
+*      NO_FLUSH = ''
+      RANGES   = RANGES
+    IMPORTING
+      ERROR    = ERROR
+      RETCODE  = RETCODE.
+  PERFORM DOI_ERROR_RAISE_MESSAGE.
+
+  REFRESH: RANGES,
+           EXCEL_INPUT.
+
+ENDFORM. "DOI_SET_RANGES_DATA
+**********************************************************************
+* FORM    :  DOI_CLOSE
+* Created :  27.06.2008 15:57:16
+**********************************************************************
+FORM DOI_CLOSE  .
+
+  PERFORM DOI_CLOSE_DOCUMENT.
+
+  IF NOT CONTROL IS INITIAL.
+    CALL METHOD CONTROL->DESTROY_CONTROL.
+    FREE CONTROL.
+  ENDIF.
+
+ENDFORM. "DOI_CLOSE
+
+*&---------------------------------------------------------------------*
+*&      Module  STATUS_0100  OUTPUT
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+MODULE STATUS_0100 OUTPUT.
+  SET PF-STATUS '0100'.
+*  SET TITLEBAR 'xxx'.
+ENDMODULE.                 " STATUS_0100  OUTPUT
+*&--------------------------------------------------------------
+*&      Form  DOI_FILL_EXCEL_CELL
+*&--------------------------------------------------------------
+*       text
+*---------------------------------------------------------------
+*  -->  p1        text
+*  <--  p2        text
+*---------------------------------------------------------------
+FORM DOI_FILL_EXCEL_CELL  USING P_ROW
+                                P_COL
+                                P_COL_NAME
+                                P_VAL.
+
+  DATA: LV_COL TYPE I.
+
+* If column number is specificed, use column number;
+* else translate column name to column number, e.g.
+* A->1, B->2, AA->27, AB->22, etc.
+  IF NOT P_COL IS INITIAL.
+    LV_COL = P_COL.
+  ELSE.
+    PERFORM DOI_CONV_XLS_COL_NAME2NUM USING P_COL_NAME
+                                      CHANGING LV_COL.
+  ENDIF. "IF P_COL IS NOT INITIAL.
+
+* Define range 'cell' for one excel cell
+  CALL METHOD SPREADSHEET->INSERT_RANGE_DIM
+    EXPORTING
+      NAME     = 'myCell'
+      NO_FLUSH = 'X'
+      TOP      = P_ROW
+      LEFT     = LV_COL
+      ROWS     = 1
+      COLUMNS  = 1
+    IMPORTING
+      ERROR    = ERROR.
+*  APPEND ERROR TO ERRORS.
+
+  REFRESH: RANGES,
+           EXCEL_INPUT.
+
+  RANGEITEM-NAME = 'myCell'.
+  RANGEITEM-COLUMNS = 1.
+  RANGEITEM-ROWS = 1.
+  APPEND RANGEITEM TO RANGES.
+
+  EXCEL_INPUT_WA-COLUMN = 1.
+  EXCEL_INPUT_WA-ROW = 1.
+  EXCEL_INPUT_WA-VALUE = P_VAL.
+  CONDENSE EXCEL_INPUT_WA-VALUE.
+  APPEND EXCEL_INPUT_WA TO EXCEL_INPUT.
+
+* Set data of the cell
+  CALL METHOD SPREADSHEET->SET_RANGES_DATA
+    EXPORTING
+      RANGES   = RANGES
+      CONTENTS = EXCEL_INPUT
+      NO_FLUSH = 'X'
+    IMPORTING
+      ERROR    = ERROR.
+*  APPEND ERROR TO ERRORS.
+
+ENDFORM.                    "DOI_FILL_EXCEL_CELL
+*&--------------------------------------------------------------
+*&      Form DOI_PROTECT_EXCEL
+*&--------------------------------------------------------------
+*       Protect excel
+*---------------------------------------------------------------
+FORM  DOI_PROTECT_EXCEL USING PROTECT TYPE C.
+
+  CALL METHOD SPREADSHEET->PROTECT
+    EXPORTING
+        PROTECT = PROTECT.
+
+ENDFORM.
+*&---------------------------------------------------------------------*
+*&      Module  PBO_EXCEL_OUTPUT  OUTPUT
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+MODULE PBO_EXCEL_OUTPUT OUTPUT.
+
+  PERFORM DOI_OUTPUT_TO_EXCEL.
+
+ENDMODULE.                 " PBO_EXCEL_OUTPUT  OUTPUT
+*&---------------------------------------------------------------------*
+*&      Module  USER_COMMAND_0100  INPUT
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+MODULE USER_COMMAND_0100 INPUT.
+  OKCODE = SY-UCOMM.
+  CASE OKCODE .
+    WHEN 'SAVE'.
+      PERFORM DOI_SAVE_DOCUMENT.
+    WHEN OTHERS.
+      "do nothing
+  ENDCASE.
+ENDMODULE.                 " USER_COMMAND_0100  INPUT
+*&---------------------------------------------------------------------*
+*&      Module  EXIT  INPUT
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+MODULE EXIT INPUT.
+  OKCODE = SY-UCOMM.
+  CASE OKCODE .
+    WHEN 'EXIT'.
+      PERFORM DOI_CLOSE.
+      LEAVE PROGRAM.
+    WHEN 'STOP'.
+      PERFORM DOI_CLOSE.
+      LEAVE PROGRAM.
+    WHEN 'BACK'.
+      PERFORM DOI_CLOSE.
+      SET SCREEN 0.
+      LEAVE SCREEN.
+*      call SELECTION-SCREEN 1000.
+    WHEN OTHERS.
+  ENDCASE.
+ENDMODULE.                 " EXIT  INPUT
+*&---------------------------------------------------------------------*
+*&      Form  DOI_CONV_XLS_COL_NUM2NAME
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+*      -->P_INT  text
+*      <--P_COL_NAME  text
+*----------------------------------------------------------------------*
+FORM DOI_CONV_XLS_COL_NUM2NAME USING    P_NUMBER       TYPE I
+                               CHANGING P_COL_NAME.
+
+  DATA: NUMBER TYPE I,
+        REMAINDER TYPE I,
+        DIVISION TYPE I VALUE 26,
+        QUOTIENT TYPE I,
+        LETTER TYPE C.
+
+  CLEAR P_COL_NAME.
+
+  CHECK P_NUMBER > 0.
+  NUMBER = P_NUMBER.
+
+  DO 10 TIMES.
+    CLEAR: QUOTIENT, REMAINDER, LETTER.
+    REMAINDER = NUMBER MOD DIVISION.
+    CASE REMAINDER.
+      WHEN 1.  LETTER = 'A'.
+      WHEN 2.  LETTER = 'B'.
+      WHEN 3.  LETTER = 'C'.
+      WHEN 4.  LETTER = 'D'.
+      WHEN 5.  LETTER = 'E'.
+      WHEN 6.  LETTER = 'F'.
+      WHEN 7.  LETTER = 'G'.
+      WHEN 8.  LETTER = 'H'.
+      WHEN 9.  LETTER = 'I'.
+      WHEN 10. LETTER = 'J'.
+      WHEN 11. LETTER = 'K'.
+      WHEN 12. LETTER = 'L'.
+      WHEN 13. LETTER = 'M'.
+      WHEN 14. LETTER = 'N'.
+      WHEN 15. LETTER = 'O'.
+      WHEN 16. LETTER = 'P'.
+      WHEN 17. LETTER = 'Q'.
+      WHEN 18. LETTER = 'R'.
+      WHEN 19. LETTER = 'S'.
+      WHEN 20. LETTER = 'T'.
+      WHEN 21. LETTER = 'U'.
+      WHEN 22. LETTER = 'V'.
+      WHEN 23. LETTER = 'W'.
+      WHEN 24. LETTER = 'X'.
+      WHEN 25. LETTER = 'Y'.
+      WHEN 0.  LETTER = 'Z'.
+    ENDCASE. "case remainder
+    CONCATENATE LETTER P_COL_NAME INTO P_COL_NAME.
+
+    QUOTIENT = NUMBER / DIVISION.
+    IF QUOTIENT < 1.
+      EXIT. "EXIT DO
+    ENDIF.
+
+    IF REMAINDER = 0.
+      REMAINDER = DIVISION.
+    ENDIF.
+    NUMBER = ( NUMBER - REMAINDER ) / DIVISION.
+    IF NUMBER = 0.
+      EXIT. "exit do
+    ENDIF.
+  ENDDO.
+
+  CONDENSE P_COL_NAME NO-GAPS.
+
+ENDFORM.                    " DOI_CONV_XLS_COL_NUM2NAME
+*&---------------------------------------------------------------------*
+*&      Form  frm_xls_DOI_FILL_EXCEL_INPUT
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+*      -->P_ROW  text
+*      -->P_COL  text
+*      -->P_VALUE  text
+*----------------------------------------------------------------------*
+FORM DOI_FILL_EXCEL_ITAB USING    P_ROW
+                                  P_COL_NAME
+                                  P_VAL.
+  DATA: LV_LINES TYPE I,
+        LV_TIMES TYPE I.
+
+  CHECK <GT_DATA_XLS> IS ASSIGNED.
+
+* Add lines if not enough
+  DESCRIBE TABLE <GT_DATA_XLS> LINES LV_LINES.
+  IF P_ROW > LV_LINES.
+    LV_TIMES = P_ROW - LV_LINES.
+    DO LV_TIMES TIMES.
+      APPEND INITIAL LINE TO <GT_DATA_XLS>.
+    ENDDO. "do lv_times
+  ENDIF.
+
+* Get row
+  READ TABLE <GT_DATA_XLS> ASSIGNING <LINE> INDEX P_ROW.
+  CHECK SY-SUBRC = 0.
+
+* Get field
+  ASSIGN COMPONENT P_COL_NAME OF STRUCTURE <LINE> TO <FIELD>.
+  CHECK SY-SUBRC = 0.
+  <FIELD> = P_VAL.
+
+ENDFORM.                    " DOI_FILL_EXCEL_ITAB
+*&---------------------------------------------------------------------*
+*&      Form  FRM_CREATE_ITAB
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+*  -->  p1        text
+*  <--  p2        text
+*----------------------------------------------------------------------*
+FORM DOI_CREATE_ITAB.
+
+  DATA: LT_FCAT TYPE LVC_T_FCAT,
+        LW_FCAT TYPE LVC_S_FCAT,
+        LR_TABLE TYPE DATA,
+        LR_LINE TYPE DATA,
+        LV_COL TYPE I.
+
+  IF <GT_DATA_XLS> IS ASSIGNED.
+    FREE <GT_DATA_XLS>.
+    EXIT.
+  ENDIF.
+
+  DO GV_TOTAL_COLS TIMES.
+    LV_COL = LV_COL + 1.
+    CLEAR LW_FCAT.
+    PERFORM DOI_CONV_XLS_COL_NUM2NAME USING LV_COL
+                                      CHANGING LW_FCAT-FIELDNAME.
+    LW_FCAT-DATATYPE = 'CHAR'.
+*    lw_fcat-inttype =
+    LW_FCAT-INTLEN = '200'.
+*    lw_fcat-decimals =
+*    lw_fcat-coltext =
+*    lw_fcat-lowercase =
+    APPEND LW_FCAT TO LT_FCAT.
+  ENDDO.
+
+  CALL METHOD CL_ALV_TABLE_CREATE=>CREATE_DYNAMIC_TABLE
+    EXPORTING
+      IT_FIELDCATALOG = LT_FCAT
+    IMPORTING
+      EP_TABLE        = LR_TABLE.
+  ASSIGN LR_TABLE->* TO <GT_DATA_XLS>.
+  CREATE DATA LR_LINE LIKE LINE OF <GT_DATA_XLS>.
+  ASSIGN LR_LINE->* TO <GW_DATA_XLS>.
+
+ENDFORM.                    " DOI_CREATE_ITAB
+*&---------------------------------------------------------------------*
+*&      Form  DOI_CONV_XLS_COL_NAME2NUM
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+*      -->P_COL_NAME  text
+*      <--P_NUMBER  text
+*----------------------------------------------------------------------*
+FORM DOI_CONV_XLS_COL_NAME2NUM USING    P_COL_NAME
+                               CHANGING P_NUMBER.
+
+  DATA: LV_COL_NAME TYPE STRING,
+        LV_LEN TYPE I,
+        LV_POS TYPE I,
+                LV_TIMES TYPE I,
+        LV_NUM TYPE I,
+        LV_FACTOR TYPE I VALUE 1.
+
+  LV_COL_NAME = P_COL_NAME.
+  CONDENSE LV_COL_NAME NO-GAPS.
+  CHECK NOT LV_COL_NAME IS INITIAL.
+
+  LV_LEN = STRLEN( LV_COL_NAME ).
+  LV_TIMES = LV_LEN.
+  LV_POS = LV_LEN - 1.
+
+  DO LV_TIMES TIMES.
+    CASE LV_COL_NAME+LV_POS(1).
+      WHEN 'A'. LV_NUM = 1.
+      WHEN 'B'. LV_NUM = 2.
+      WHEN 'C'. LV_NUM = 3.
+      WHEN 'D'. LV_NUM = 4.
+      WHEN 'E'. LV_NUM = 5.
+      WHEN 'F'. LV_NUM = 6.
+      WHEN 'G'. LV_NUM = 7.
+      WHEN 'H'. LV_NUM = 8.
+      WHEN 'I'. LV_NUM = 9.
+      WHEN 'J'. LV_NUM = 10.
+      WHEN 'K'. LV_NUM = 11.
+      WHEN 'L'. LV_NUM = 12.
+      WHEN 'M'. LV_NUM = 13.
+      WHEN 'N'. LV_NUM = 14.
+      WHEN 'O'. LV_NUM = 15.
+      WHEN 'P'. LV_NUM = 16.
+      WHEN 'Q'. LV_NUM = 17.
+      WHEN 'R'. LV_NUM = 18.
+      WHEN 'S'. LV_NUM = 19.
+      WHEN 'T'. LV_NUM = 20.
+      WHEN 'U'. LV_NUM = 21.
+      WHEN 'V'. LV_NUM = 22.
+      WHEN 'W'. LV_NUM = 23.
+      WHEN 'X'. LV_NUM = 24.
+      WHEN 'Y'. LV_NUM = 25.
+      WHEN 'Z'. LV_NUM = 26.
+    ENDCASE.
+    LV_POS = LV_POS - 1.
+    P_NUMBER = P_NUMBER
+              + LV_NUM * LV_FACTOR.
+    LV_FACTOR = LV_FACTOR * 26.
+  ENDDO.
+
+ENDFORM.                    " DOI_CONV_XLS_COL_NAME2NUM
+*&---------------------------------------------------------------------*
+*&      Form  DOI_INITIALIZATION
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+*  -->  p1        text
+*  <--  p2        text
+*----------------------------------------------------------------------*
+FORM DOI_INITIALIZATION.
+
+  FREE ERRORS[].
+
+* Initiate download path
+  CLEAR GV_PATH.
+  IF GV_FILTER IS INITIAL.
+    GV_FILTER = '.xls'.
+  ENDIF.
+
+* 这里是初始化打开EXCEL文件
+  PERFORM DOI_CREATE_CONTROL.
+
+* Dynamically create internal table to store xls data
+  PERFORM DOI_CREATE_ITAB.
+
+ENDFORM.                    " DOI_INITIALIZATION
+*&---------------------------------------------------------------------*
+*&      Form  DOI_HIDE_ROWS
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+*      -->P_ROW_BEGIN  text
+*      -->P_ROW_END  text
+*----------------------------------------------------------------------*
+FORM DOI_HIDE_ROWS USING    P_ROW_BEGIN
+                            P_ROW_END.
+
+  DATA: LV_ROWS TYPE I.
+
+** Method "HIDE_ROWS" hides rows one by one, which would
+** cause performance issue.
+*  LV_ROWS = P_ROW_END - P_ROW_BEGIN.
+*  PERFORM DOI_INSERT_RANGE_DIM USING P_ROW_BEGIN
+*                          1
+*                          LV_ROWS
+*                          1
+*                          'hide'.
+*  CALL METHOD SPREADSHEET->HIDE_ROWS
+*    EXPORTING
+*      NAME = 'hide'
+*      NO_FLUSH = 'X'
+*    IMPORTING
+*      ERROR = ERROR
+*      RETCODE = RETCODE.
+
+  CALL METHOD DOCUMENT->EXECUTE_MACRO
+    EXPORTING
+      MACRO_STRING = 'Module1.hide_rows'
+*      NO_FLUSH     = ' '
+      PARAM1       = P_ROW_BEGIN
+*      PARAM10      =
+*      PARAM11      =
+*      PARAM12      =
+      PARAM2       = P_ROW_END
+*      PARAM3       =
+*      PARAM4       =
+*      PARAM5       =
+*      PARAM6       =
+*      PARAM7       =
+*      PARAM8       =
+*      PARAM9       =
+      PARAM_COUNT  = 2
+*      SCRIPT_NAME  = ''
+    IMPORTING
+      ERROR        = ERROR
+      RETCODE      = RETCODE
+*    CHANGING
+*      ERROR_STRING =
+*      RETVALUE     =
+      .
+ENDFORM.                    " DOI_HIDE_ROWS
+*****************************************************************
+* FORM : DOI_OUTPUT_TO_EXCEL
+* Created : 03.07.2008 16:15:20
+*****************************************************************
+FORM DOI_OUTPUT_TO_EXCEL .
+
+  DATA: L_ROW TYPE I,
+        L_COL TYPE I,
+        L_VAL TYPE STRING.
+
+  CHECK <GT_DATA_XLS> IS ASSIGNED.
+  CHECK NOT <GT_DATA_XLS> IS INITIAL.
+
+* Get total row count. Total column number is already defined.
+  DESCRIBE TABLE <GT_DATA_XLS> LINES GV_TOTAL_ROWS.
+
+* 定义要输出到Excel上的范围
+  PERFORM DOI_INSERT_RANGE_DIM USING 1 "输出范围在Excel的实际起始行号
+                               1 "输出范围在Excel的实际起始列号
+                               GV_TOTAL_ROWS "输出范围的行数
+                               GV_TOTAL_COLS "输出范围的列数
+                               'myRange'. "输出范围名称
+
+* 下面要往定义的范围里填数
+  CLEAR EXCEL_INPUT[].
+
+  DO GV_TOTAL_ROWS TIMES.
+    L_ROW = L_ROW + 1.
+    CLEAR L_COL.
+
+    DO GV_TOTAL_COLS TIMES.
+      L_COL = L_COL + 1.
+
+      CLEAR L_VAL.
+      READ TABLE <GT_DATA_XLS> ASSIGNING <LINE> INDEX L_ROW.
+      IF SY-SUBRC = 0.
+        ASSIGN COMPONENT L_COL OF STRUCTURE <LINE>
+                                         TO <FIELD>.
+        IF SY-SUBRC = 0.
+          L_VAL = <FIELD>.
+        ENDIF.
+      ENDIF.
+* 向定义的范围里填数时，行号列号是指范围内的行号列号
+      PERFORM DOI_FILL_EXCEL_INPUT USING L_ROW   "定义的范围里的行号
+                                         L_COL   "定义的范围里的列号
+                                         L_VAL.  "单元格内容
+    ENDDO.
+  ENDDO.
+  FREE <GT_DATA_XLS>.
+
+** Set frame
+**  Bit Description
+**  0 Sets the left margin
+**  1 Sets the top margin
+**  2 Sets the bottom margin
+**  3 Sets the right margin
+**  4 Horizontal line
+**  5 Sets the left margin
+**  6 Thickness
+**  7 Thickness
+*  DATA: LV_TYP TYPE I.
+*  FIELD-SYMBOLS <F> TYPE X.
+*  ASSIGN LV_TYP TO <F> CASTING.
+*  SET BIT 1 OF <F> TO 0.
+*  SET BIT 2 OF <F> TO 0.
+*  SET BIT 3 OF <F> TO 0.
+*  SET BIT 4 OF <F> TO 0.
+*  SET BIT 5 OF <F> TO 1.
+*  SET BIT 6 OF <F> TO 1.
+*  LV_TYP = <F>(1).
+*  CALL METHOD SPREADSHEET->SET_FRAME
+*    EXPORTING
+*      RANGENAME = 'myRange'
+*      TYP       = LV_TYP
+*      COLOR     = 3
+*      NO_FLUSH  = 'X'
+*    IMPORTING
+*      ERROR    = ERRORS
+*      RETCODE  = RETCODE.
+*  APPEND ERRORS.
+
+* 把刚才填入的数据输出到Excel上
+* 注意如定义的范围没有填满，将看不到任何输出
+  PERFORM DOI_SET_RANGES_DATA.
+
+ENDFORM. "DOI_OUTPUT_TO_EXCEL
+*&---------------------------------------------------------------------*
+*&      Form  DOI_ERRORS_RAISE_MESSAGE
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+*  -->  p1        text
+*  <--  p2        text
+*----------------------------------------------------------------------*
+FORM DOI_ERRORS_RAISE_MESSAGE.
+
+  LOOP AT ERRORS INTO ERROR.
+    CALL METHOD ERROR->RAISE_MESSAGE
+      EXPORTING
+        TYPE = 'E'.
+  ENDLOOP.
+
+  FREE ERRORS[].
+
+ENDFORM.                    " DOI_ERRORS_RAISE_MESSAGE
+*&---------------------------------------------------------------------*
+*&      Form  DOI_ERROR_RAISE_MESSAGE
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+*  -->  p1        text
+*  <--  p2        text
+*----------------------------------------------------------------------*
+FORM DOI_ERROR_RAISE_MESSAGE.
+
+  CHECK RETCODE <> 'OK'.
+
+  DOI_ERROR = 'X'.
+  APPEND ERROR TO ERRORS.
+
+*  CALL METHOD ERROR->RAISE_MESSAGE
+*    EXPORTING
+*      TYPE = 'E'.
+
+  FREE ERROR.
+
+ENDFORM.                    " DOI_ERROR_RAISE_MESSAGE
+*&---------------------------------------------------------------------*
+*&      Form  DOI_DELETE_ROWS
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+*      -->P_ROW_BEGIN  text
+*      -->P_ROW_END  text
+*----------------------------------------------------------------------*
+FORM DOI_DELETE_ROWS USING    P_ROW_BEGIN
+                              P_ROW_END.
+
+  CALL METHOD DOCUMENT->EXECUTE_MACRO
+    EXPORTING
+      MACRO_STRING = 'Module1.delete_rows'
+*      NO_FLUSH     = ' '
+      PARAM1       = P_ROW_BEGIN
+*      PARAM10      =
+*      PARAM11      =
+*      PARAM12      =
+      PARAM2       = P_ROW_END
+*      PARAM3       =
+*      PARAM4       =
+*      PARAM5       =
+*      PARAM6       =
+*      PARAM7       =
+*      PARAM8       =
+*      PARAM9       =
+      PARAM_COUNT  = 2
+*      SCRIPT_NAME  = ''
+    IMPORTING
+      ERROR        = ERROR
+      RETCODE      = RETCODE
+*    CHANGING
+*      ERROR_STRING =
+*      RETVALUE     =
+      .
+ENDFORM.                    " DOI_delete_ROWS
+*&---------------------------------------------------------------------*
+*&      Form  doi_open_document
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+*  -->  p1        text
+*  <--  p2        text
+*----------------------------------------------------------------------*
+FORM DOI_OPEN_DOCUMENT.
+
+  DATA: HAS TYPE I.
+
+* Get proxy
+  CALL METHOD CONTROL->GET_DOCUMENT_PROXY
+    EXPORTING
+*          DOCUMENT_FORMAT    = 'NATIVE'
+      DOCUMENT_TYPE      = DOCUMENT_TYPE
+*          NO_FLUSH           = ' '
+*          REGISTER_CONTAINER = ' '
+    IMPORTING
+      DOCUMENT_PROXY     = DOCUMENT
+      ERROR              = ERROR
+      RETCODE            = RETCODE.
+  PERFORM DOI_ERROR_RAISE_MESSAGE.
+
+* Open template document
+  CALL METHOD DOCUMENT->OPEN_DOCUMENT
+    EXPORTING
+*    DOCUMENT_TITLE   = ' '
+      DOCUMENT_URL     = ITEM_URL
+*      NO_FLUSH         = 'X'
+      OPEN_INPLACE     = INPLACE
+*    OPEN_READONLY    = ' '
+*    PROTECT_DOCUMENT = ' '
+*    STARTUP_MACRO    = ''
+*    USER_INFO        =
+*    ONSAVE_MACRO     =
+    IMPORTING
+      ERROR            = ERROR
+      RETCODE          = RETCODE.
+  PERFORM DOI_ERROR_RAISE_MESSAGE.
+
+*  CALL METHOD DOCUMENT->HAS_SPREADSHEET_INTERFACE
+*    EXPORTING
+*      NO_FLUSH     = ''
+*    IMPORTING
+*      IS_AVAILABLE = HAS
+*      ERROR        = ERROR.
+
+  CALL METHOD DOCUMENT->GET_SPREADSHEET_INTERFACE
+*        EXPORTING
+*          NO_FLUSH        = ' '
+    IMPORTING
+      ERROR           = ERROR
+      SHEET_INTERFACE = SPREADSHEET
+      RETCODE         = RETCODE.
+  PERFORM DOI_ERROR_RAISE_MESSAGE.
+
+** Set Activate Sheet
+*  CALL METHOD spreadsheet->select_sheet
+*    EXPORTING
+*      name     = 'Sheet1'
+*      no_flush = ''
+*    IMPORTING
+*      error    = error.
+
+ENDFORM.                    " doi_open_document
+*&---------------------------------------------------------------------*
+*&      Form  DOI_CLOSE_DOCUMENT
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+*  -->  p1        text
+*  <--  p2        text
+*----------------------------------------------------------------------*
+FORM DOI_CLOSE_DOCUMENT.
+
+  CHECK NOT DOCUMENT IS INITIAL.
+
+  CALL METHOD DOCUMENT->CLOSE_DOCUMENT
+    EXPORTING
+      DO_SAVE     = ' '
+      NO_FLUSH    = ' '
+    IMPORTING
+      ERROR       = ERROR
+*      HAS_CHANGED =
+      RETCODE     = RETCODE.
+  PERFORM DOI_ERROR_RAISE_MESSAGE.
+
+  CALL METHOD DOCUMENT->RELEASE_DOCUMENT
+*  EXPORTING
+*    NO_FLUSH = ' '
+    IMPORTING
+      ERROR    = ERROR
+      RETCODE  = RETCODE.
+  PERFORM DOI_ERROR_RAISE_MESSAGE.
+
+  FREE DOCUMENT.
+
+ENDFORM.                    " DOI_CLOSE_DOCUMENT
+*&---------------------------------------------------------------------*
+*&      Form  DOI_GET_DOCUMENT_URI
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+*  -->  p1        text
+*  <--  p2        text
+*----------------------------------------------------------------------*
+FORM DOI_GET_DOCUMENT_URI.
+
+  CLEAR: DOC_SIGNATURE[],
+         DOC_SIGNATURE_WA,
+         DOC_URIS[],
+         DOC_URIS_WA,
+         ITEM_URL.
+
+* Set signature
+  DOC_SIGNATURE_WA-PROP_NAME = 'DESCRIPTION'.
+  CASE DOCUMENT_TYPE.
+    WHEN GC_DOCUMENT_TYPE_EXCEL.
+      DOC_SIGNATURE_WA-PROP_VALUE = GV_TEMPLATE_NAME.
+*    WHEN LOTUS.
+*      DOC_SIGNATURE_WA-PROP_VALUE = 'SPREAD123'.
+  ENDCASE.
+  APPEND DOC_SIGNATURE_WA TO DOC_SIGNATURE.
+
+  CREATE OBJECT BDS_INSTANCE.
+
+*  CALL METHOD BDS_INSTANCE->GET_INFO
+*    EXPORTING
+*      CLASSNAME  = DOC_CLASSNAME
+*      CLASSTYPE  = DOC_CLASSTYPE
+*      OBJECT_KEY = DOC_OBJECT_KEY
+*    CHANGING
+*      COMPONENTS = DOC_COMPONENTS
+*      SIGNATURE  = DOC_SIGNATURE.
+
+  CALL METHOD BDS_INSTANCE->GET_WITH_URL
+    EXPORTING
+      CLASSNAME  = DOC_CLASSNAME
+      CLASSTYPE  = DOC_CLASSTYPE
+      OBJECT_KEY = DOC_OBJECT_KEY
+    CHANGING
+      URIS       = DOC_URIS
+      SIGNATURE  = DOC_SIGNATURE.
+
+  FREE BDS_INSTANCE.
+
+* Get template name defined in transaction [OAOR]
+  READ TABLE DOC_URIS INTO DOC_URIS_WA INDEX 1.
+  IF SY-SUBRC = 0.
+    ITEM_URL = DOC_URIS_WA-URI.
+  ENDIF.
+
+ENDFORM.                    " DOI_GET_DOCUMENT_URI
