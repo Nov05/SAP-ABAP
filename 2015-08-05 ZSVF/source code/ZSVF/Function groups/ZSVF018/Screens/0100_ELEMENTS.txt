@@ -1,0 +1,20 @@
+TCTRL_ZSVF018	
+VIM_FRAME_FIELD	____________________________________________________________
+*ZSVF018-ZSVF_DOC_TYPE	DocT
+*ZSVF018-BUKRS	CoCd
+*ZSVF018-SPRAS	Language
+*ZSVF018-ZSVF_LABLTYPE	Label Type
+*ZSVF018-ZSVF_LABLVER	Lbl Ver
+*ZSVF018-ZSVF_PRTTYPE	Type
+*ZSVF018-ZSVF_JOBID	SVF Job ID
+VIM_MARKED	_
+ZSVF018-ZSVF_DOC_TYPE	____
+ZSVF018-BUKRS	____
+ZSVF018-SPRAS	__
+ZSVF018-ZSVF_LABLTYPE	__________
+ZSVF018-ZSVF_LABLVER	___
+ZSVF018-ZSVF_PRTTYPE	_
+ZSVF018-ZSVF_JOBID	________________________________________
+VIM_POSI_PUSH	____________________
+VIM_POSITION_INFO	______________________________
+OK_CODE	____

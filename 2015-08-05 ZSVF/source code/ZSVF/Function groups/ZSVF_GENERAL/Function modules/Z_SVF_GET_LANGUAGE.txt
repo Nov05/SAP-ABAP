@@ -1,0 +1,35 @@
+FUNCTION Z_SVF_GET_LANGUAGE.
+*"----------------------------------------------------------------------
+*"*"Local Interface:
+*"  IMPORTING
+*"     VALUE(I_SPRAS) TYPE  SPRAS OPTIONAL
+*"     VALUE(I_LAND1) TYPE  T005-LAND1 OPTIONAL
+*"  EXPORTING
+*"     VALUE(O_SPRAS) TYPE  SPRAS
+*"----------------------------------------------------------------------
+  DATA: LV_SPRAS TYPE SPRAS,
+        LW_T005  TYPE T005.
+
+  IF I_SPRAS IS NOT INITIAL.
+* Get language by language
+    LV_SPRAS = I_SPRAS.
+  ELSE.
+* Get language by country
+    IF I_LAND1 IS NOT INITIAL.
+      SELECT SINGLE * FROM T005 INTO LW_T005
+        WHERE LAND1 = I_LAND1.
+      IF SY-SUBRC = 0.
+        LV_SPRAS = LW_T005-SPRAS.
+      ENDIF.
+    ENDIF. "if i_land1 is not initial
+  ENDIF.
+
+  IF LV_SPRAS = '1' OR LV_SPRAS IS INITIAL.
+* Chinese
+    O_SPRAS = LV_SPRAS.
+  ELSE.
+* English
+    O_SPRAS = 'E'.
+  ENDIF.
+
+ENDFUNCTION.

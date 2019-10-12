@@ -1,0 +1,78 @@
+TCTRL_ZSVF009	
+VIM_FRAME_FIELD	____________________________________________________________
+*ZSVF009-EBELN	Purchasing Doc.
+*ZSVF009-EBELP	Item
+*ZSVF009-ZSVF_DOC_ID	Copy ID
+*ZSVF009-LOEKZ	DI
+*ZSVF009-MATNR	Material
+*ZSVF009-TXZ01	Material Description
+*ZSVF009-WERKS	Plnt
+*ZSVF009-LGORT	SLoc
+*ZSVF009-MENGE	Order Quantity
+*ZSVF009-MEINS	OUn
+*ZSVF009-NETPR	Net Price
+*ZSVF009-PEINH	Price Unit
+*ZSVF009-BPRME	OPU
+*ZSVF009-NETWR	Net Order Value
+*ZSVF009-BRTWR	Gross order value
+*ZSVF009-PSTYP	I
+*ZSVF009-KNTTP	A
+*ZSVF009-EINDT	Del. Date
+*ZSVF009-BEDNR	Tracking Number
+*ZSVF009-MWSKZ	Tx
+*ZSVF009-ZSVF_MWSKZ	Tax Code/Rate
+*ZSVF009-ZSVF_NETPR	Net price
+*ZSVF009-ZSVF_PEROPU	Per Unit
+*ZSVF009-ZSVF_GRSPR	Gross Value
+*ZSVF009-ZSVF_DLVADS	Delivery Address
+*ZSVF009-ZSVF_CHAGEID_I	Item Chg. Ind.
+*ZSVF009-ZSVF_DELTXT	Item Cancellation
+*ZSVF009-ZSVF_CHGTXT	Change Field Desc
+*ZSVF009-LOG_REPID	Program Name
+*ZSVF009-LOG_UNAME	User Name
+*ZSVF009-LOG_DATUM	Date
+*ZSVF009-LOG_UZEIT	Time
+*ZSVF009-LOG_REPID_CHG	Program Name
+*ZSVF009-LOG_UNAME_CHG	User Name
+*ZSVF009-LOG_DATUM_CHG	Date
+*ZSVF009-LOG_UZEIT_CHG	Time
+VIM_MARKED	_
+ZSVF009-EBELN	__________
+ZSVF009-EBELP	_____
+ZSVF009-ZSVF_DOC_ID	____
+ZSVF009-LOEKZ	_
+ZSVF009-MATNR	__________________
+ZSVF009-TXZ01	________________________________________
+ZSVF009-WERKS	____
+ZSVF009-LGORT	____
+ZSVF009-MENGE	_________________
+ZSVF009-MEINS	___
+ZSVF009-NETPR	______________
+ZSVF009-PEINH	______
+ZSVF009-BPRME	___
+ZSVF009-NETWR	________________
+ZSVF009-BRTWR	________________
+ZSVF009-PSTYP	_
+ZSVF009-KNTTP	_
+ZSVF009-EINDT	__________
+ZSVF009-BEDNR	__________
+ZSVF009-MWSKZ	__
+ZSVF009-ZSVF_MWSKZ	_______________
+ZSVF009-ZSVF_NETPR	________________
+ZSVF009-ZSVF_PEROPU	____________
+ZSVF009-ZSVF_GRSPR	____________________
+ZSVF009-ZSVF_DLVADS	____________________________________________________________
+ZSVF009-ZSVF_CHAGEID_I	__________________________________________________
+ZSVF009-ZSVF_DELTXT	____________________________________________________________________________________________________________________________________
+ZSVF009-ZSVF_CHGTXT	____________________________________________________________________________________________________________________________________
+ZSVF009-LOG_REPID	________________________________________
+ZSVF009-LOG_UNAME	____________
+ZSVF009-LOG_DATUM	__________
+ZSVF009-LOG_UZEIT	________
+ZSVF009-LOG_REPID_CHG	________________________________________
+ZSVF009-LOG_UNAME_CHG	____________
+ZSVF009-LOG_DATUM_CHG	__________
+ZSVF009-LOG_UZEIT_CHG	________
+VIM_POSI_PUSH	____________________
+VIM_POSITION_INFO	______________________________
+OK_CODE	____

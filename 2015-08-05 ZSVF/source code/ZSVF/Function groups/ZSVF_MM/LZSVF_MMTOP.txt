@@ -1,0 +1,6 @@
+FUNCTION-POOL ZSVF_MM.                      "MESSAGE-ID ..
+
+* INCLUDE LZSVF_MMD...                       " Local class definition
+
+INCLUDE ZSVF_TOP01. "Global Variants
+INCLUDE ZSVF_TOP02. "Macros

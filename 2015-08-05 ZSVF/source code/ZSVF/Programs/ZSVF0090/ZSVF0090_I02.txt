@@ -1,0 +1,123 @@
+*&---------------------------------------------------------------------*
+*&  Include           ZSVF0090_I02
+*&---------------------------------------------------------------------*
+DATA: LV_MSGV1 TYPE SY-MSGV1.
+
+*----------------------------------------------------------------------*
+* Get data from memory
+*----------------------------------------------------------------------*
+CLEAR ENT_RETCO.
+IF NAST-AENDE EQ SPACE.
+  GV_DRUVO = '1'.
+ELSE.
+  GV_DRUVO = '2'.
+ENDIF.
+
+LV_MSGV1 = NAST-TDCOVTITLE.
+
+CALL FUNCTION 'ZME_READ_PO_FOR_PRINTING'
+  EXPORTING
+    IX_NAST                  = NAST
+    IX_SCREEN                = ENT_SCREEN
+  IMPORTING
+    EX_RETCO                 = ENT_RETCO
+    DOC                      = GW_DOC
+    EX_NAST                  = NAST
+  CHANGING
+    CX_DRUVO                 = GV_DRUVO
+    CX_FROM_MEMORY           = GV_FROM_MEMORY
+  EXCEPTIONS
+    ITEM_SPECIFICATION_ERROR = 1
+    OTHERS                   = 2.
+
+LV_SUBRC = SY-SUBRC.
+
+IF GV_PO_PREVIEW_MODE = GC_PO_PREVIEW_MODE_OFF.
+* ############
+  IF ENT_SCREEN IS NOT INITIAL.
+    MESSAGE S024(ZSVF) DISPLAY LIKE 'E'. "#############
+    RETURN. "Exit Form
+  ENDIF.
+ENDIF. "IF GV_PO_PREVIEW_MODE = GC_PO_PREVIEW_MODE_OFF.
+
+IF LV_SUBRC = 1.
+* Message ZSVF406 ####### & #####
+  PERFORM FRM_NAST_PROTOCAL_UPDATE USING 'ZSVF' "MSG_ARBGB
+                                         '406'  "MSG_NR
+                                         'E'    "MSG_TY
+                                         LV_MSGV1 "MSG_V1
+                                         ' '    "MSG_V2
+                                         ' '    "MSG_V3
+                                         ' '.   "MSG_V4
+  ENT_RETCO = '2'.
+  RETURN. "exit form
+ENDIF.
+
+* Check data
+IF GW_DOC-XEKKO-EBELN IS INITIAL
+  OR GW_DOC-XEKPO[] IS INITIAL.
+* Message ZSVF999 #########
+  PERFORM FRM_NAST_PROTOCAL_UPDATE USING 'ZSVF' "MSG_ARBGB
+                                         '999'  "MSG_NR
+                                         'E'    "MSG_TY
+                                         ' '    "MSG_V1
+                                         ' '    "MSG_V2
+                                         ' '    "MSG_V3
+                                         ' '.   "MSG_V4
+  ENT_RETCO = '2'.
+  RETURN. "exit form
+ENDIF.
+
+* Get total item number
+CLEAR LV_ITEM_TOTAL.
+*  DESCRIBE TABLE GW_DOC-XEKPO LINES LV_ITEM_TOTAL.
+LV_ITEM_TOTAL = GW_DOC-XEKKO-LPONR. "Last item
+
+*----------------------------------------------------------------------*
+* Get Vendor Info
+*----------------------------------------------------------------------*
+CLEAR LW_LFA1.
+SELECT SINGLE * FROM LFA1 INTO LW_LFA1
+  WHERE LIFNR = GW_DOC-XEKKO-LIFNR.
+
+* 2015-04-23 Vendor address bug fix
+CLEAR LV_ADRNR.
+IF GW_DOC-XEKKO-ADRNR IS NOT INITIAL.
+  LV_ADRNR = GW_DOC-XEKKO-ADRNR.
+ELSE.
+  LV_ADRNR = LW_LFA1-ADRNR.
+ENDIF.
+PERFORM FRM_GET_VENDOR_ADDRESS USING    LV_ADRNR
+                               CHANGING LV_NAME1.
+
+*----------------------------------------------------------------------*
+* Get Languages
+*----------------------------------------------------------------------*
+* Get SVF output language
+CLEAR LV_SVF_LANG.
+*  SVF output language = message communication language
+*  LV_SVF_LANG = NAST-SPRAS.
+* SVF output langauge is decided by vendor's country
+CALL FUNCTION 'Z_SVF_GET_LANGUAGE_BY_VENDOR'
+  EXPORTING
+    I_LIFNR = GW_DOC-XEKKO-LIFNR
+  IMPORTING
+    O_SPRAS = LV_SVF_LANG.
+* Get PO language
+CLEAR LV_PO_LANG.
+LV_PO_LANG = GW_DOC-XEKKO-SPRAS.
+
+*----------------------------------------------------------------------*
+* Get Company Information
+*----------------------------------------------------------------------*
+CALL FUNCTION 'Z_SVF_GET_BUKRS_INFO'
+  EXPORTING
+    I_DOC_TYPE   = GC_DOC_TYPE_GRPO
+*   I_WERKS      =
+    I_BUKRS      = GW_DOC-XEKKO-BUKRS
+*   I_SPRAS      = SY-LANGU
+  IMPORTING
+*   O_BUKRS      =
+    O_BUTXT      = LV_BUTXT
+    O_ZSVF_CCPIC = LV_ZSVF_CCPIC
+    O_STREET     = LV_STREET.

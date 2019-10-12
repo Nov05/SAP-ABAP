@@ -1,0 +1,58 @@
+FUNCTION Z_SVF_GET_GROSS_VALUE.
+*"----------------------------------------------------------------------
+*"*"Local Interface:
+*"  IMPORTING
+*"     VALUE(I_PRINT_KEY) TYPE  ZSVF001_KEY OPTIONAL
+*"     VALUE(I_BUKRS) TYPE  BUKRS OPTIONAL
+*"     VALUE(I_MWSKZ) TYPE  MWSKZ OPTIONAL
+*"     VALUE(I_MENGE) TYPE  MENGE_D OPTIONAL
+*"     VALUE(I_PEINH) TYPE  EPEIN DEFAULT 1
+*"     VALUE(I_NETPR) TYPE  BPREI OPTIONAL
+*"     VALUE(I_NETWR) TYPE  BWERT OPTIONAL
+*"     VALUE(I_BRTWR) TYPE  BBWERT OPTIONAL
+*"  EXPORTING
+*"     VALUE(O_ZSVF_GRSPR) TYPE  ZSVF_GRSPR
+*"  EXCEPTIONS
+*"      ARITHMETIC_OVERFLOW
+*"----------------------------------------------------------------------
+  DATA: LV_GRSPR    TYPE P DECIMALS 2,
+        LV_TAX_RATE TYPE ZSVF_TAX_RATE.
+
+  CLEAR O_ZSVF_GRSPR.
+
+* When needed to calculate gross value
+  IF I_NETWR <> I_BRTWR.
+    O_ZSVF_GRSPR = I_BRTWR.
+    RETURN.
+  ENDIF.
+
+* Get tax rate
+  CALL FUNCTION 'Z_SVF_GET_TAX_PERCENTAGE'
+    EXPORTING
+      I_BUKRS    = I_BUKRS
+      I_MWSKZ    = I_MWSKZ
+    IMPORTING
+      O_TAX_RATE = LV_TAX_RATE
+*     O_TAX_PERCENTAGE       =
+    .
+
+  TRY.
+      LV_GRSPR = I_NETWR * ( '1.0' + LV_TAX_RATE ).
+      O_ZSVF_GRSPR = LV_GRSPR.
+    CATCH CX_SY_ARITHMETIC_OVERFLOW.
+* Error log
+      "##########
+      MACRO_SVF_LOG_WRITE I_PRINT_KEY
+                          'E'    "Message Type
+                          '405'  "Message Number
+                          '' "Message Variant 1
+                          '' "Message Variant 2
+                          '' "Message Variant 3
+                          ''."Message Variant 4
+* Message & Exception
+      "##########
+      MESSAGE S405(ZSVF)
+              DISPLAY LIKE 'E' RAISING ARITHMETIC_OVERFLOW.
+  ENDTRY.
+
+ENDFUNCTION.

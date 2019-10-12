@@ -1,0 +1,10 @@
+TCTRL_ZSVF014	
+VIM_FRAME_FIELD	____________________________________________________________
+*ZSVF014-ZSVF_DEPT_ID	Department ID
+*ZSVF014-ZSVF_DEPT_NAME	Department
+VIM_MARKED	_
+ZSVF014-ZSVF_DEPT_ID	________________________________________
+ZSVF014-ZSVF_DEPT_NAME	________________________________________
+VIM_POSI_PUSH	____________________
+VIM_POSITION_INFO	______________________________
+OK_CODE	____

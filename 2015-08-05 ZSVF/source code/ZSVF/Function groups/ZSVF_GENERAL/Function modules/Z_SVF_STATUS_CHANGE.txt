@@ -1,0 +1,112 @@
+FUNCTION Z_SVF_STATUS_CHANGE.
+*"----------------------------------------------------------------------
+*"*"Local Interface:
+*"  IMPORTING
+*"     VALUE(PRINT_KEY) TYPE  ZSVF001_KEY
+*"     VALUE(ZSVF_PRTSTAT) TYPE  ZSVF_PRTSTAT
+*"     VALUE(ZSVF_CHAGER) TYPE  ZSVF_CHAGER DEFAULT SY-UNAME
+*"     VALUE(ZSVF_CHDDATE) TYPE  ZSVF_CHDDATE DEFAULT SY-DATUM
+*"  EXCEPTIONS
+*"      PRINT_KEY_INVALID
+*"      PRINT_STATUS_INVALID
+*"      MODIFY_TABLE_ERROR
+*"----------------------------------------------------------------------
+* Caution:
+* 1. Before using this function, lock the entry of table ZSVF001.
+* 2. Remember to commit work after the function call.
+*-----------------------------------------------------------------------
+* Change Log:
+* 1. 2014-09-22 Created by Arwen Liu
+* 2. 2015-02-28 ###########
+*----------------------------------------------------------------------*
+  DATA: LW_ZSVF001    TYPE ZSVF001,
+        LV_STATUS_OLD TYPE ZSVF001-ZSVF_PRTSTAT,
+        LV_DOC_NUM    TYPE ZSVF_DOC_NUM,
+        LV_DOC_ITEM   TYPE ZSVF_DOC_ITEM.
+
+*----------------------------------------------------------------------*
+* Check Input Parameters
+*----------------------------------------------------------------------*
+* print keys
+  IF PRINT_KEY-ZSVF_DOC_TYPE IS INITIAL
+  OR PRINT_KEY-ZSVF_DOC_NUM IS INITIAL
+*  OR PRINT_KEY-ZSVF_DOC_ITEM IS INITIAL
+  OR PRINT_KEY-ZSVF_DOC_ID IS INITIAL
+  OR PRINT_KEY-ZSVF_PRT_NO IS INITIAL.
+    RAISE PRINT_KEY_INVALID.
+  ENDIF.
+
+* status
+  IF ZSVF_PRTSTAT IS INITIAL.
+    RAISE PRINT_STATUS_INVALID.
+  ENDIF.
+
+  LV_DOC_NUM = PRINT_KEY-ZSVF_DOC_NUM.
+  LV_DOC_ITEM = PRINT_KEY-ZSVF_DOC_ITEM.
+
+*----------------------------------------------------------------------*
+* Check whether record exists
+*----------------------------------------------------------------------*
+  SELECT SINGLE * FROM ZSVF001 INTO LW_ZSVF001
+    WHERE ZSVF_DOC_TYPE = PRINT_KEY-ZSVF_DOC_TYPE
+    AND ZSVF_DOC_NUM = LV_DOC_NUM
+    AND ZSVF_DOC_ITEM = LV_DOC_ITEM
+    AND ZSVF_DOC_ID = PRINT_KEY-ZSVF_DOC_ID
+    AND ZSVF_PRT_NO = PRINT_KEY-ZSVF_PRT_NO.
+
+  IF SY-SUBRC <> 0.
+    RAISE PRINT_KEY_INVALID.
+  ELSE.
+    LV_STATUS_OLD = LW_ZSVF001-ZSVF_PRTSTAT.
+  ENDIF.
+*----------------------------------------------------------------------*
+* Validate New Status
+*----------------------------------------------------------------------*
+  IF ZSVF_PRTSTAT+0(1) < LV_STATUS_OLD+0(1) "e.g. B0=>A0
+    OR ( ZSVF_PRTSTAT+0(1) = LV_STATUS_OLD+0(1) "e.g. A1=>A0
+         AND LV_STATUS_OLD+1(1) = '0'
+         AND ZSVF_PRTSTAT+1(1) <> '0').
+* Error Log
+    "Message ZSVF030: ################# & ##### &
+    MACRO_SVF_LOG_WRITE PRINT_KEY "Print request Key
+                        'E'    "Message Type
+                        '030'  "Message Number
+                        LV_STATUS_OLD "Message Variant 1
+                        ZSVF_PRTSTAT "Message Variant 2
+                        '' "Message Variant 3
+                        ''. "Message Variant 4
+    MESSAGE S030(ZSVF) WITH GC_LPATH_LOG DISPLAY LIKE 'E'
+                       RAISING PRINT_STATUS_INVALID.
+    RETURN.
+  ENDIF.
+
+* New Status
+  LW_ZSVF001-ZSVF_PRTSTAT = ZSVF_PRTSTAT.
+
+* Number of tries
+*  IF ZSVF_PRTSTAT+0(1) <> LV_STATUS_OLD+0(1).
+*    LW_ZSVF001-ZSVF_PRTAMT = 0.
+*  ENDIF.
+*  IF ZSVF_PRTSTAT+1(1) <> '0'.
+*    LW_ZSVF001-ZSVF_PRTAMT = LW_ZSVF001-ZSVF_PRTAMT + 1.
+*  ENDIF.
+* 2015-03-11 Number of tries to send print request to SVF
+  IF ZSVF_PRTSTAT+0(1) = 'C'.
+    LW_ZSVF001-ZSVF_PRTAMT = LW_ZSVF001-ZSVF_PRTAMT + 1.
+  ENDIF.
+
+* Entry Log
+  LW_ZSVF001-LOG_REPID_CHG = SY-REPID.
+  LW_ZSVF001-LOG_UNAME_CHG = SY-UNAME.
+  LW_ZSVF001-LOG_DATUM_CHG = SY-DATUM.
+  LW_ZSVF001-LOG_UZEIT_CHG = SY-UZEIT.
+
+*----------------------------------------------------------------------*
+* Update database table
+*----------------------------------------------------------------------*
+  MODIFY ZSVF001 FROM LW_ZSVF001.
+  IF SY-SUBRC <> 0.
+    RAISE MODIFY_TABLE_ERROR.
+  ENDIF.
+
+ENDFUNCTION.

@@ -1,0 +1,29 @@
+FUNCTION Z_SVF_COPYID_GET_NEXT.
+*"----------------------------------------------------------------------
+*"*"#####
+*"  IMPORTING
+*"     VALUE(I_DOC_TYPE) TYPE  ZSVF_DOC_TYPE
+*"     VALUE(I_DOC_NUM)
+*"     VALUE(I_DOC_ITEM) OPTIONAL
+*"  EXPORTING
+*"     VALUE(O_DOC_ID) TYPE  ZSVF_DOC_ID
+*"----------------------------------------------------------------------
+  DATA: LV_DOC_NUM  TYPE ZSVF_DOC_NUM,
+        LV_DOC_ITEM TYPE ZSVF_DOC_ITEM,
+        LV_DOC_ID   TYPE ZSVF_DOC_ID.
+
+  CLEAR O_DOC_ID.
+
+  LV_DOC_NUM = I_DOC_NUM.
+  LV_DOC_ITEM = I_DOC_ITEM.
+
+  SELECT SINGLE MAX( ZSVF_DOC_ID )
+    FROM ZSVF001
+    INTO (LV_DOC_ID)
+    WHERE ZSVF_DOC_TYPE = I_DOC_TYPE
+    AND ZSVF_DOC_NUM = LV_DOC_NUM
+    AND ZSVF_DOC_ITEM = LV_DOC_ITEM.
+
+  O_DOC_ID = LV_DOC_ID + 1.
+
+ENDFUNCTION.

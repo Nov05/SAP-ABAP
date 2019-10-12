@@ -1,0 +1,39 @@
+FUNCTION Z_SVF_GET_PAYMENT_DESCRIPTION.
+*"----------------------------------------------------------------------
+*"*"Local Interface:
+*"  IMPORTING
+*"     VALUE(I_ZTERM) TYPE  T052-ZTERM
+*"     VALUE(I_SPRAS) TYPE  SPRAS DEFAULT SY-LANGU
+*"  EXPORTING
+*"     VALUE(O_SVF_ZTERM) TYPE  ZSVF_ZTERM
+*"     VALUE(O_SPRAS) TYPE  T052U-SPRAS
+*"----------------------------------------------------------------------
+* Get payment description in input language; if not found, get
+* decription in any language.
+
+  DATA: LV_TEXT1 TYPE T052U-TEXT1.
+
+  CHECK I_ZTERM IS NOT INITIAL
+  AND I_SPRAS IS NOT INITIAL.
+
+* ##########
+  SELECT SINGLE TEXT1 FROM T052U
+    INTO (LV_TEXT1)
+    WHERE SPRAS = I_SPRAS
+    AND ZTERM = I_ZTERM.
+  IF SY-SUBRC = 0 AND LV_TEXT1 IS NOT INITIAL.
+    O_SVF_ZTERM = LV_TEXT1.
+    O_SPRAS = I_SPRAS.
+    RETURN.
+  ENDIF.
+
+* ##################
+  SELECT SINGLE SPRAS TEXT1 FROM T052U
+    INTO (O_SPRAS, LV_TEXT1)
+    WHERE ZTERM = I_ZTERM
+    AND TEXT1 <> ''.
+  IF SY-SUBRC = 0.
+    O_SVF_ZTERM = LV_TEXT1.
+  ENDIF.
+
+ENDFUNCTION.

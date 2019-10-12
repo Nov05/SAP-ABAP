@@ -1,0 +1,111 @@
+***********************************************************************
+* Project Name : D**kin DCC Upgrading - SVF
+* Program Name : ZSVF0050
+* Description  : SVF Production Label Print
+* Date/Autohr  : 2014-10-14 / Nov05
+***********************************************************************
+* M O D I F I C A T I O N  L O G
+***********************************************************************
+* ChangeDate  Programmer  Request     Description
+* ==========  ==========  ==========  =================================
+* 2014-10-14  Nov05       CA1K900047  2014_SVF_Wave1 Repository Object
+***********************************************************************
+*
+REPORT  ZSVF0050
+*   NO STANDARD PAGE HEADING
+*   LINE-SIZE 120
+*   LINE-COUNT 90
+MESSAGE-ID ZSVF.
+*======================================================================*
+*  Selection Screen
+*======================================================================*
+SELECTION-SCREEN BEGIN OF BLOCK BLK01 WITH FRAME TITLE TEXT-B01.
+PARAMETERS: CPROG AS CHECKBOX. "'X' - triggerred by Program XXXX
+SELECTION-SCREEN END OF BLOCK BLK01.
+*======================================================================*
+*  Includes
+*======================================================================*
+*** Global Data Declear
+*INCLUDE ZSVF0050_c01.  "Class Definition
+INCLUDE ZSVF_TOP01.
+INCLUDE ZSVF_TOP02.
+INCLUDE ZSVF0050_TOP.
+*INCLUDE ZSVF0050_top.   "Global Variable
+*INCLUDE ZSVF0050_o01.  "PBO
+*INCLUDE ZSVF0050_i01.  "PAI
+INCLUDE ZSVF0050_F01.   "Subroutine(FORMS)
+
+*======================================================================*
+*  Selection Screen Events
+*======================================================================*
+*** Maintain Selection Screen Output
+*AT SELECTION-SCREEN OUTPUT.
+
+*** F4 Value Help
+*AT SELECTION-SCREEN ON VALUE-REQUEST FOR p_path.
+*  PERFORM frm_f4_path CHANGING p_path.
+
+*** Check Input Data
+*AT SELECTION-SCREEN.
+
+*AT SELECTION-SCREEN ON <f>.
+*AT SELECTION-SCREEN ON BLOCK <>.
+****CHECK ON SELECT SCREEN INPUT
+
+*======================================================================*
+*  Report events
+*======================================================================*
+*** initial data
+*INITIALIZATION.
+
+*** Prepare Report Data
+START-OF-SELECTION.
+  PERFORM FRM_IMPORT_DATA.
+
+* Check data
+  CLEAR GW_CAUFVD_TAB.
+  READ TABLE CAUFVD_TAB INTO GW_CAUFVD_TAB INDEX 1.
+  IF GW_CAUFVD_TAB-AUFNR IS INITIAL.
+    MESSAGE I999. "###########
+    LEAVE PROGRAM.
+  ENDIF.
+
+  CLEAR GW_AFPOD_TAB.
+  READ TABLE AFPOD_TAB INTO GW_AFPOD_TAB INDEX 1.
+
+*** Output Report
+END-OF-SELECTION.
+  PERFORM FRM_PROCESS_DATA.
+  PERFORM FRM_OUTPUT_DATA.
+
+*  IF GV_ERROR <> 'X'.
+*    MESSAGE I997. "#####
+*  ENDIF.
+* #### & #######
+  CALL FUNCTION 'Z_SVF_MESSAGE_TYPE'
+    EXPORTING
+      I_TCODE = SY-TCODE
+*     I_MSGID = 'ZSVF'
+      I_MSGNO = '212'
+      I_MSGV1 = GW_CAUFVD_TAB-AUFNR
+      I_MSGV2 = GV_PRINT_EXCEPTION
+*     I_MSGV3 =
+*     I_MSGV4 =
+    .
+*======================================================================*
+*  List events
+*======================================================================*
+*** Page header
+*TOP-OF-PAGE.
+
+*** Page Header After First List
+*TOP-OF-PAGE DURING LINE-SELECTION.
+
+*** Page Footer
+*END-OF-PAGE.
+
+*** When Double Click
+*AT LINE-SELECTION.
+
+*** When Click Some Icon (function code)
+*AT USER-COMMAND.

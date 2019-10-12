@@ -1,0 +1,42 @@
+TCTRL_ZSVF007	
+VIM_FRAME_FIELD	____________________________________________________________
+*ZSVF007-PRUEFLOS	Inspection Lot
+*ZSVF007-MERKNR	Char.
+*ZSVF007-ZSVF_DOC_ID	Copy ID
+*ZSVF007-VERWMERKM	MstrChar
+*ZSVF007-KURZTEXT	Description
+*ZSVF007-TOLERANZOB	+
+*ZSVF007-TOLERANZUN	+
+*ZSVF007-PLAUSIOBEN	+
+*ZSVF007-PLAUSIUNTE	+
+*ZSVF007-MSEH6	Techn.
+*ZSVF007-LOG_REPID	Program Name
+*ZSVF007-LOG_UNAME	User Name
+*ZSVF007-LOG_DATUM	Date
+*ZSVF007-LOG_UZEIT	Time
+*ZSVF007-LOG_REPID_CHG	Program Name
+*ZSVF007-LOG_UNAME_CHG	User Name
+*ZSVF007-LOG_DATUM_CHG	Date
+*ZSVF007-LOG_UZEIT_CHG	Time
+VIM_MARKED	_
+ZSVF007-PRUEFLOS	____________
+ZSVF007-MERKNR	____
+ZSVF007-ZSVF_DOC_ID	____
+ZSVF007-VERWMERKM	________
+ZSVF007-KURZTEXT	________________________________________
+ZSVF007-TOLERANZOB	_______________________
+ZSVF007-TOLERANZUN	_______________________
+ZSVF007-PLAUSIOBEN	_______________________
+ZSVF007-PLAUSIUNTE	_______________________
+ZSVF007-MSEH6	______
+ZSVF007-LOG_REPID	________________________________________
+ZSVF007-LOG_UNAME	____________
+ZSVF007-LOG_DATUM	__________
+ZSVF007-LOG_UZEIT	________
+ZSVF007-LOG_REPID_CHG	________________________________________
+ZSVF007-LOG_UNAME_CHG	____________
+ZSVF007-LOG_DATUM_CHG	__________
+ZSVF007-LOG_UZEIT_CHG	________
+VIM_POSI_PUSH	____________________
+VIM_POSITION_INFO	______________________________
+OK_CODE	____

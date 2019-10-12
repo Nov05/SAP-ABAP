@@ -1,0 +1,16 @@
+FUNCTION Z_SVF_GET_MANUFACTURE_DATE.
+*"----------------------------------------------------------------------
+*"*"Local Interface:
+*"  IMPORTING
+*"     VALUE(I_GSTRP) TYPE  PM_ORDGSTRP OPTIONAL
+*"     VALUE(I_HSDAT) TYPE  HSDAT OPTIONAL
+*"  EXPORTING
+*"     VALUE(O_HSDAT) TYPE  ZSVF_HSDAT
+*"----------------------------------------------------------------------
+
+  CLEAR O_HSDAT.
+
+  CONCATENATE I_HSDAT+0(4) '-' I_HSDAT+4(2)
+              INTO O_HSDAT.
+
+ENDFUNCTION.

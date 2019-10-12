@@ -1,0 +1,73 @@
+Description	SVF Messages
+Language	E
+
+Number	Message
+000	& & & &
+001	Send CSV File: External command execution error
+002	Get Copy ID: & & & is locked by some other program
+003	Get Copy ID: & & & failed to unlock
+004	Read SVF Log: Open dataset & &
+005	Read SVF Log: Invalid Print Request Key, Log &, Line &, CSV &
+006	Read SVF Log: Open dataset & no authority
+007	Read SVF Log: Get physical path for logical path & failed
+008	Read SVF Log: Get file & directory failed
+009	Get Printer Info: Printer not found. Please maintain table ZSVF004.
+010	Get User Info: User & & mail info not found in table ADR6
+011	Send CSV File: & & & &
+012	Create CSV File: Open dataset & &
+013	Create CSV File: Close dataset & error
+014	Create file & failed
+015	Get Printer Info: Printer config not found. Pls maintain table ZSVF012.
+016	Get Printer Info: Config not found. Maintain table ZSVF004, ZSVF012
+017	Get Printer Info: Config not found. Please maintain table ZSVF005
+018	Send CSV File: Sending & failed
+019	Create CSV File: Not able to select table &. Print Request Key error. &
+020	Printer not found
+021	SVF Log file & contains no data.
+022	Read SVF Log: File & movement failed
+023	Send CSV File: SVF Job ID not found. Pls maintain table ZSVF018.
+024	No print preview for current output type
+025	Get Job ID: Print type not found. Please maintain table ZSVF005.
+026	Send CSV File: External command config table ZSVF020 not maintained
+027	Send CSV File: Extn command table ZSVF020-ZSVF_CMD_TYPE = JAR not found
+028	Send CSV File: Extn cmd table ZSVF020-ZSVF_CMD_TYPE = CMD not found
+029	Comapany & picture info not found. Please maintain table ZSVF017.
+030	Print Request Status: Invalid status. Change not allow from & to &.
+031	Send CSV File: File deletion failed &
+032	Read SVF Log: Getting file path failure. Logial path &, File name &
+033	Read SVF Log: &
+034	Read SVF Log: Deleting file failed &
+035	Send CSV File: External command &, Additional parameters &
+036	Get Job ID: Print Request Key error. Please check the programs.
+037	, Printer Name error. Please contact the system administrator.
+038	Send CSV File: Printer Name & error
+039	Same program is in execution.
+040	SVF Log files processing error. Please check log table ZSVF013.
+041	SVF Log files have been successfully processed.
+042	Read SVF Log: File & processed
+200	===================== PP Module Messages ===============================
+201	Work order & production line not maintained
+202	Production department not maintained in Material & master data
+203	Classification not maintained for Material &. Labels are not printed.
+204	Label material not found. Please config table ZSVF016. Label not printed.
+205	Label material & not found in the component. Label not printed.
+206	Label info not found in Material & classification. Labels not printed.
+207	Material &, Batch &, production date not maintained. Labels not printed.
+208	Label print quantity not an integer. Pls modify it. Labels not printed.
+209	Production Instruction & failed to print
+210	Production Instruction & sent to print&
+211	Process Order & labels failed to print
+212	Process Order & labels sent to print&
+400	===================== MM Module Messages ===============================
+401	Purchase order & failed to print
+402	Purchase order & sent to print&
+403	Purchase Order & Goods Receipt Check Sheet failed to print
+404	Purchase Order & Goods Receipt Check Sheet sent to print&
+405	Data overflow when calculating amount (w/ tax)
+406	Item & print specification format invalid. GR check sheet not printed.
+600	===================== QM Module Messages ===============================
+601	Inspection Instruction & sent to print&
+602	Inspection Instruction & failed to print
+997	Document send to print
+998	Document failed to print: & & &
+999	No data to be printed.

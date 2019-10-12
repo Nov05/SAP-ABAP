@@ -1,0 +1,10 @@
+*---------------------------------------------------------------------*
+*    program for:   TABLEPROC_ZSVF015
+*   generation date: 2015/04/08 at 19:43:17
+*   view maintenance generator version: #001407#
+*---------------------------------------------------------------------*
+FUNCTION TABLEPROC_ZSVF015             .
+
+  PERFORM TABLEPROC.
+
+ENDFUNCTION.

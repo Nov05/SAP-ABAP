@@ -1,0 +1,27 @@
+FUNCTION Z_SVF_MESSAGE_TYPE.
+*"----------------------------------------------------------------------
+*"*"Local Interface:
+*"  IMPORTING
+*"     VALUE(I_TCODE) TYPE  SY-TCODE
+*"     VALUE(I_MSGID) TYPE  SY-MSGID DEFAULT 'ZSVF'
+*"     VALUE(I_MSGNO) TYPE  SY-MSGNO DEFAULT '000'
+*"     VALUE(I_MSGV1) OPTIONAL
+*"     VALUE(I_MSGV2) OPTIONAL
+*"     VALUE(I_MSGV3) OPTIONAL
+*"     VALUE(I_MSGV4) OPTIONAL
+*"----------------------------------------------------------------------
+  DATA: LV_MSGTY TYPE SY-MSGTY.
+
+  CASE I_TCODE.
+    WHEN 'COR1' OR 'COR2' OR 'COR3'
+      OR 'CO01' OR 'CO02' OR 'CO03'
+      OR 'QA01' OR 'QA02' OR 'QA03'.
+      LV_MSGTY = 'I'.
+    WHEN OTHERS.
+      LV_MSGTY = 'S'.
+  ENDCASE.
+
+  MESSAGE ID I_MSGID TYPE LV_MSGTY NUMBER I_MSGNO
+          WITH I_MSGV1 I_MSGV2 I_MSGV3 I_MSGV4.
+
+ENDFUNCTION.

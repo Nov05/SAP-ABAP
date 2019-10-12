@@ -1,0 +1,48 @@
+TCTRL_ZSVF002	
+VIM_FRAME_FIELD	____________________________________________________________
+*ZSVF002-AUFNR	Order
+*ZSVF002-ZSVF_DOC_ID	Copy ID
+*ZSVF002-WERKS	Plnt
+*ZSVF002-GSTRP	Bas. Start
+*ZSVF002-GLTRP	Basic fin.
+*ZSVF002-GAMNG	Target quantity
+*ZSVF002-GMEIN	BUn
+*ZSVF002-PLNBEZ	Material
+*ZSVF002-FGMAKTX	Material Description
+*ZSVF002-FGCHARG	Batch
+*ZSVF002-BUKRS	CoCd
+*ZSVF002-ZSVF_CCADS	Company Address
+*ZSVF002-ZSVF_CCPIC	Company Picture Name
+*ZSVF002-LOG_REPID	Program Name
+*ZSVF002-LOG_UNAME	User Name
+*ZSVF002-LOG_DATUM	Date
+*ZSVF002-LOG_UZEIT	Time
+*ZSVF002-LOG_REPID_CHG	Program Name
+*ZSVF002-LOG_UNAME_CHG	User Name
+*ZSVF002-LOG_DATUM_CHG	Date
+*ZSVF002-LOG_UZEIT_CHG	Time
+VIM_MARKED	_
+ZSVF002-AUFNR	____________
+ZSVF002-ZSVF_DOC_ID	____
+ZSVF002-WERKS	____
+ZSVF002-GSTRP	__________
+ZSVF002-GLTRP	__________
+ZSVF002-GAMNG	_________________
+ZSVF002-GMEIN	___
+ZSVF002-PLNBEZ	__________________
+ZSVF002-FGMAKTX	________________________________________
+ZSVF002-FGCHARG	__________
+ZSVF002-BUKRS	____
+ZSVF002-ZSVF_CCADS	____________________________________________________________________________________________________
+ZSVF002-ZSVF_CCPIC	____________________________________________________________________________________________________________________________________
+ZSVF002-LOG_REPID	________________________________________
+ZSVF002-LOG_UNAME	____________
+ZSVF002-LOG_DATUM	__________
+ZSVF002-LOG_UZEIT	________
+ZSVF002-LOG_REPID_CHG	________________________________________
+ZSVF002-LOG_UNAME_CHG	____________
+ZSVF002-LOG_DATUM_CHG	__________
+ZSVF002-LOG_UZEIT_CHG	________
+VIM_POSI_PUSH	____________________
+VIM_POSITION_INFO	______________________________
+OK_CODE	____

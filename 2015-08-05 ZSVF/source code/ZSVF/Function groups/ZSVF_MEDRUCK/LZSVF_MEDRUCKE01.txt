@@ -1,0 +1,40 @@
+*----------------------------------------------------------------------*
+*   INCLUDE LMEDRUCKE01                                                *
+*----------------------------------------------------------------------*
+FORM entry_neu USING ent_retco ent_screen.
+
+  DATA: l_druvo LIKE t166k-druvo,
+        l_nast  LIKE nast,
+        l_from_memory,
+        l_doc   TYPE meein_purchase_doc_print.
+
+  CLEAR ent_retco.
+  IF nast-aende EQ space.
+    l_druvo = '1'.
+  ELSE.
+    l_druvo = '2'.
+  ENDIF.
+
+  CALL FUNCTION 'ME_READ_PO_FOR_PRINTING'
+    EXPORTING
+      ix_nast        = nast
+      ix_screen      = ent_screen
+    IMPORTING
+      ex_retco       = ent_retco
+      ex_nast        = l_nast
+      doc            = l_doc
+    CHANGING
+      cx_druvo       = l_druvo
+      cx_from_memory = l_from_memory.
+  CHECK ent_retco EQ 0.
+  CALL FUNCTION 'ME_PRINT_PO'
+    EXPORTING
+      ix_nast        = l_nast
+      ix_druvo       = l_druvo
+      doc            = l_doc
+      ix_screen      = ent_screen
+      ix_from_memory = l_from_memory
+    IMPORTING
+      ex_retco       = ent_retco.
+
+ENDFORM.                    "entry_neu

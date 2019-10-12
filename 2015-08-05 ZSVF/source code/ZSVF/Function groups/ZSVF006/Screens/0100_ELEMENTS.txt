@@ -1,0 +1,60 @@
+TCTRL_ZSVF006	
+VIM_FRAME_FIELD	____________________________________________________________
+*ZSVF006-PRUEFLOS	Inspection Lot
+*ZSVF006-ZSVF_DOC_ID	Copy ID
+*ZSVF006-WERKS	Plnt
+*ZSVF006-PASTRTERM	Insp. start date
+*ZSVF006-PAENDTERM	End of Inspection
+*ZSVF006-SELMATNR	Material
+*ZSVF006-AUFNR	Order
+*ZSVF006-CHARG	Batch
+*ZSVF006-KTEXTMAT	Object short text
+*ZSVF006-LOSMENGE	Insp. Lot Quantity
+*ZSVF006-MENGENEINH	BUn
+*ZSVF006-EBELN	Purchasing Doc.
+*ZSVF006-EBELP	Item
+*ZSVF006-ZSVF_PDDEPT	Prod.Dept.
+*ZSVF006-ZSVF_PDLINE	+
+*ZSVF006-ZSVF_ORD_TYPE	Document Type
+*ZSVF006-ZSVF_ORD_NO	Document Number
+*ZSVF006-ZSVF_CCADS	Company Address
+*ZSVF006-ZSVF_CCPIC	Company Picture Name
+*ZSVF006-LOG_REPID	Program Name
+*ZSVF006-LOG_UNAME	User Name
+*ZSVF006-LOG_DATUM	Date
+*ZSVF006-LOG_UZEIT	Time
+*ZSVF006-LOG_REPID_CHG	Program Name
+*ZSVF006-LOG_UNAME_CHG	User Name
+*ZSVF006-LOG_DATUM_CHG	Date
+*ZSVF006-LOG_UZEIT_CHG	Time
+VIM_MARKED	_
+ZSVF006-PRUEFLOS	____________
+ZSVF006-ZSVF_DOC_ID	____
+ZSVF006-WERKS	____
+ZSVF006-PASTRTERM	__________
+ZSVF006-PAENDTERM	__________
+ZSVF006-SELMATNR	__________________
+ZSVF006-AUFNR	____________
+ZSVF006-CHARG	__________
+ZSVF006-KTEXTMAT	________________________________________
+ZSVF006-LOSMENGE	_________________
+ZSVF006-MENGENEINH	___
+ZSVF006-EBELN	__________
+ZSVF006-EBELP	_____
+ZSVF006-ZSVF_PDDEPT	__________
+ZSVF006-ZSVF_PDLINE	_
+ZSVF006-ZSVF_ORD_TYPE	____________________________________________________________
+ZSVF006-ZSVF_ORD_NO	__________________
+ZSVF006-ZSVF_CCADS	____________________________________________________________________________________________________
+ZSVF006-ZSVF_CCPIC	____________________________________________________________________________________________________________________________________
+ZSVF006-LOG_REPID	________________________________________
+ZSVF006-LOG_UNAME	____________
+ZSVF006-LOG_DATUM	__________
+ZSVF006-LOG_UZEIT	________
+ZSVF006-LOG_REPID_CHG	________________________________________
+ZSVF006-LOG_UNAME_CHG	____________
+ZSVF006-LOG_DATUM_CHG	__________
+ZSVF006-LOG_UZEIT_CHG	________
+VIM_POSI_PUSH	____________________
+VIM_POSITION_INFO	______________________________
+OK_CODE	____

@@ -1,0 +1,96 @@
+FUNCTION Z_SVF_GET_PO_LONG_TEXT.
+*"----------------------------------------------------------------------
+*"*"Local Interface:
+*"  IMPORTING
+*"     VALUE(OBJECT) TYPE  THEAD-TDOBJECT
+*"     VALUE(ID) TYPE  THEAD-TDID
+*"     VALUE(EBELN) TYPE  EBELN
+*"     VALUE(EBELP) TYPE  EBELP OPTIONAL
+*"     VALUE(LANGUAGE) TYPE  THEAD-TDSPRAS DEFAULT SY-LANGU
+*"  EXPORTING
+*"     VALUE(LONG_TEXT_STR) TYPE  STRING
+*"----------------------------------------------------------------------
+  DATA: LV_NAME      TYPE THEAD-TDNAME,
+        LT_LINES     TYPE TABLE OF TLINE,
+        LW_LINES     TYPE TLINE,
+        LT_C_DATATAB TYPE TDTAB_C132,
+        LV_C132(132) TYPE C.
+
+  CLEAR LONG_TEXT_STR.
+
+  CHECK EBELN IS NOT INITIAL.
+  IF EBELP IS INITIAL.
+    OBJECT = 'EKKO'.
+    LV_NAME = EBELN.
+  ELSE.
+    OBJECT = 'EKPO'.
+    CONCATENATE EBELN EBELP INTO LV_NAME.
+  ENDIF.
+
+  CALL FUNCTION 'READ_TEXT'
+    EXPORTING
+*     CLIENT                  = SY-MANDT
+      ID                      = ID
+      LANGUAGE                = LANGUAGE
+      NAME                    = LV_NAME
+      OBJECT                  = OBJECT
+*     ARCHIVE_HANDLE          = 0
+*     LOCAL_CAT               = ' '
+* IMPORTING
+*     HEADER                  =
+*     OLD_LINE_COUNTER        =
+    TABLES
+      LINES                   = LT_LINES
+    EXCEPTIONS
+      ID                      = 1
+      LANGUAGE                = 2
+      NAME                    = 3
+      NOT_FOUND               = 4
+      OBJECT                  = 5
+      REFERENCE_CHECK         = 6
+      WRONG_ACCESS_TO_ARCHIVE = 7
+      OTHERS                  = 8.
+
+  CHECK SY-SUBRC = 0.
+
+  CALL FUNCTION 'CONVERT_ITF_TO_ASCII'
+    EXPORTING
+*     CODEPAGE          = '0000'
+      FORMATWIDTH       = 132
+*     LANGUAGE          = SY-LANGU
+*     TABLETYPE         = 'ASC'
+*     TAB_SUBSTITUTE    = ' '
+*     LF_SUBSTITUTE     = ' '
+*     REPLACE_SYMBOLS   = 'X'
+*     REPLACE_SAPCHARS  = 'X'
+    IMPORTING
+*     FORMATWIDTH_E     =
+*     X_DATATAB         =
+      C_DATATAB         = LT_C_DATATAB
+*     X_SIZE            =
+    TABLES
+      ITF_LINES         = LT_LINES
+    EXCEPTIONS
+      INVALID_TABLETYPE = 1
+      OTHERS            = 2.
+
+  CHECK SY-SUBRC = 0.
+
+  LOOP AT LT_C_DATATAB INTO LV_C132.
+    CONCATENATE LONG_TEXT_STR LV_C132 INTO LONG_TEXT_STR.
+  ENDLOOP.
+
+  CONDENSE LONG_TEXT_STR.
+
+* Remove special characters
+  REPLACE ALL OCCURRENCES OF CL_ABAP_CHAR_UTILITIES=>HORIZONTAL_TAB
+    IN LONG_TEXT_STR WITH SPACE.
+
+  "Carriage Return and Line Feed
+  "Character Pair
+  REPLACE ALL OCCURRENCES OF CL_ABAP_CHAR_UTILITIES=>CR_LF
+    IN LONG_TEXT_STR WITH SPACE.
+  REPLACE ALL OCCURRENCES OF CL_ABAP_CHAR_UTILITIES=>NEWLINE
+    IN LONG_TEXT_STR WITH SPACE.
+
+ENDFUNCTION.

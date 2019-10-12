@@ -1,0 +1,24 @@
+TCTRL_ZSVF005	
+VIM_FRAME_FIELD	____________________________________________________________
+*ZSVF005-ZSVF_DOC_TYPE	DocT
+*ZSVF005-ZSVF_PRTID	Printer Key
+*ZSVF005-ZSVF_PRT_CONT	S.No.
+*ZSVF005-ZSVF_PRTMED	Pr Imd
+*ZSVF005-ZSVF_PRTTYPE	Type
+*ZSVF005-ZSVF_USERNAME	SVF User Name
+*ZSVF005-ZSVF_DEPT_ID	Department ID
+*ZSVF005-ZSVF_PRTNAME	Printer Name
+*ZSVF005-ZSVF_INACTIVE	Inac.
+VIM_MARKED	
+ZSVF005-ZSVF_DOC_TYPE	____
+ZSVF005-ZSVF_PRTID	__________
+ZSVF005-ZSVF_PRT_CONT	____
+ZSVF005-ZSVF_PRTMED	
+ZSVF005-ZSVF_PRTTYPE	
+ZSVF005-ZSVF_USERNAME	____________________________________________________________________________________________________
+ZSVF005-ZSVF_DEPT_ID	________________________________________
+ZSVF005-ZSVF_PRTNAME	____________________________________________________________________________________________________________________________________
+ZSVF005-ZSVF_INACTIVE	
+VIM_POSI_PUSH	____________________
+VIM_POSITION_INFO	______________________________
+OK_CODE	____________________

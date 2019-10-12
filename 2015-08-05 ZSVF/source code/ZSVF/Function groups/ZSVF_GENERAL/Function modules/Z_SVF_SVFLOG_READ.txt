@@ -1,0 +1,245 @@
+FUNCTION Z_SVF_SVFLOG_READ.
+*"----------------------------------------------------------------------
+*"*"Local Interface:
+*"  EXCEPTIONS
+*"      SVFLOG_FILEPATH_ERROR
+*"      SVFLOG_GET_DIRECTORY_ERROR
+*"      SVFLOG_FILE_MOVING_ERROR
+*"----------------------------------------------------------------------
+* Change Log:
+* 1. 2014-09-19 Created by Arwen Liu
+* 2. 2014-10-27 SVF Log encoding is ANSI. OS is Chinese, might be in Japanese
+* 3. 2014-11-04 Log field opKind = Print, ####### Print #####
+*               resultCode = 0, ######## 0 ######
+*----------------------------------------------------------------------*
+
+  DATA: LV_DOC_TYPE        TYPE STRING,
+        LV_DOC_TYPE_TARGET TYPE STRING,
+        LV_FILEPATH_LOG    TYPE PATHEXTERN,
+        LV_DIR_NAME        TYPE EPSF-EPSDIRNAM,
+        LT_DIR_LIST        TYPE TABLE OF EPSFILI,
+        LW_DIR_LIST        TYPE EPSFILI,
+        LV_POSITION        TYPE I,
+        LV_FILENAME        TYPE AUTHB-FILENAME,
+        LV_FILENAME_FULL   TYPE PATHEXTERN,
+        LV_MESSAGE         TYPE STRING,
+        LV_LINE_STR        TYPE STRING,
+        LT_TABLE_STR       TYPE TABLE OF STRING,
+        LV_PRINT_KEY       TYPE ZSVF001_KEY. "for log only
+
+*----------------------------------------------------------------------*
+* Get SVF Log File Path
+*----------------------------------------------------------------------*
+  LV_DOC_TYPE = GC_DOC_TYPE_LOG.
+  CALL FUNCTION 'Z_SVF_FILEPATH_GET'
+    EXPORTING
+      I_DOC_TYPE         = LV_DOC_TYPE
+*     I_FILE_NAME        =
+    IMPORTING
+      O_FILEPATH         = LV_FILEPATH_LOG
+    EXCEPTIONS
+      GET_FILEPATH_ERROR = 1
+      OTHERS             = 2.
+
+  IF SY-SUBRC <> 0.
+* Error Log
+    "Message Class ZSVF: ## SVF Log###### & ########
+    MACRO_SVF_LOG_WRITE LV_PRINT_KEY "Print request Key
+                        'E'    "Message Type
+                        '007'  "Message Number
+                        GC_LPATH_LOG "Message Variant 1
+                        '' "Message Variant 2
+                        '' "Message Variant 3
+                        ''. "Message Variant 4
+    MESSAGE S007(ZSVF) WITH GC_LPATH_LOG DISPLAY LIKE 'E'.
+    RAISE SVFLOG_FILEPATH_ERROR.
+  ENDIF.
+
+*----------------------------------------------------------------------*
+* Get all file names in the SVF log file directory
+*----------------------------------------------------------------------*
+  LV_DIR_NAME = LV_FILEPATH_LOG.
+  CALL FUNCTION 'EPS_GET_DIRECTORY_LISTING'
+    EXPORTING
+      DIR_NAME               = LV_DIR_NAME
+*     FILE_MASK              = ' '
+*   IMPORTING
+*     DIR_NAME               =
+*     FILE_COUNTER           =
+*     ERROR_COUNTER          =
+    TABLES
+      DIR_LIST               = LT_DIR_LIST
+    EXCEPTIONS
+      INVALID_EPS_SUBDIR     = 1
+      SAPGPARAM_FAILED       = 2
+      BUILD_DIRECTORY_FAILED = 3
+      NO_AUTHORIZATION       = 4
+      READ_DIRECTORY_FAILED  = 5
+      TOO_MANY_READ_ERRORS   = 6
+      EMPTY_DIRECTORY_LIST   = 7
+      OTHERS                 = 8.
+
+  IF SY-SUBRC <> 0 AND SY-SUBRC <> 7.
+* Error Log
+    "Message Class ZSVF: ## SVF Log############ &
+    MACRO_SVF_LOG_WRITE LV_PRINT_KEY "Print request Key
+                        'E'    "Message Type
+                        '008'  "Message Number
+                        LV_DIR_NAME "Message Variant 1
+                        '' "Message Variant 2
+                        '' "Message Variant 3
+                        ''. "Message Variant 4
+    MESSAGE S008(ZSVF) WITH GC_LPATH_LOG DISPLAY LIKE 'E'.
+    RAISE SVFLOG_GET_DIRECTORY_ERROR.
+  ENDIF.
+
+*----------------------------------------------------------------------*
+* Read data files from server
+*----------------------------------------------------------------------*
+  LOOP AT LT_DIR_LIST INTO LW_DIR_LIST WHERE RC = '0000'.
+
+    CLEAR LV_POSITION.
+    LV_POSITION = STRLEN( LW_DIR_LIST-NAME ) - 4.
+    TRANSLATE LW_DIR_LIST-NAME TO UPPER CASE.
+    CHECK LW_DIR_LIST-NAME+LV_POSITION(4) = GC_EXTENSION_LOG.
+
+    CLEAR LV_FILENAME_FULL.
+    CONCATENATE LV_FILEPATH_LOG LW_DIR_LIST-NAME INTO LV_FILENAME_FULL.
+
+* 2015-02-26 Deleted. There is no need to check access authority
+** Check dataset access authority
+*    LV_FILENAME = LV_FILENAME_FULL.
+*    CALL FUNCTION 'AUTHORITY_CHECK_DATASET'
+*      EXPORTING
+**       PROGRAM          =
+*        ACTIVITY         = SABC_ACT_READ
+*        FILENAME         = LV_FILENAME
+*      EXCEPTIONS
+*        NO_AUTHORITY     = 1
+*        ACTIVITY_UNKNOWN = 2
+*        OTHERS           = 3.
+*
+*    IF SY-SUBRC <> 0.
+** Error Log
+*      "Message Class ZSVF: ## SVF Log#Open dataset & ###
+*      MACRO_SVF_LOG_WRITE LV_PRINT_KEY "Print request Key
+*                          'E'    "Message Type
+*                          '006'  "Message Number
+*                          LV_FILENAME "Message Variant 1
+*                          '' "Message Variant 2
+*                          '' "Message Variant 3
+*                          ''. "Message Variant 4
+*      CONTINUE.
+*    ENDIF.
+
+* Open dataset
+* 2014-10-27 SVF Log encoding is ANSI.
+    OPEN DATASET LV_FILENAME_FULL FOR INPUT
+      MESSAGE LV_MESSAGE IN LEGACY TEXT MODE CODE PAGE '8400'.
+    IF SY-SUBRC <> 0.
+* Error Log
+      "Message Class ZSVF: ## SVF Log#Open dataset & &
+      MACRO_SVF_LOG_WRITE LV_PRINT_KEY "Print request Key
+                          'E'    "Message Type
+                          '004'  "Message Number
+                          LV_FILENAME "Message Variant 1
+                          LV_MESSAGE "Message Variant 2
+                          '' "Message Variant 3
+                          ''. "Message Variant 4
+      MESSAGE S004(ZSVF) WITH GC_LPATH_LOG DISPLAY LIKE 'E'.
+      CONTINUE.
+    ENDIF.
+
+* Read dataset
+    CLEAR LT_TABLE_STR[].
+    DO 100000 TIMES.
+      CLEAR LV_LINE_STR.
+      READ DATASET LV_FILENAME_FULL INTO LV_LINE_STR.
+      IF SY-SUBRC <> 0.
+        EXIT. "exit do
+      ENDIF.
+      APPEND LV_LINE_STR TO LT_TABLE_STR.
+    ENDDO. "DO 100000 TIMES.
+
+* Close dataset
+    CLOSE DATASET LV_FILENAME_FULL.
+
+*----------------------------------------------------------------------*
+* Process Log
+*----------------------------------------------------------------------*
+    CLEAR LV_DOC_TYPE_TARGET.
+    CALL FUNCTION 'Z_SVF_SVFLOG_STATUS_UPD'
+      EXPORTING
+        I_SVFLOG_FILENAME     = LW_DIR_LIST-NAME
+      TABLES
+        IT_SVFLOG             = LT_TABLE_STR
+      EXCEPTIONS
+        SVFLOG_EMPTY_FILE     = 1
+        SVGLOG_CONTAINS_ERROR = 2
+        OTHERS                = 3.
+
+    CASE SY-SUBRC.
+      WHEN 0.
+* Log
+        "## SVF Log### & ###
+        MACRO_SVF_LOG_WRITE LV_PRINT_KEY "Print request Key
+                            'S'    "Message Type
+                            '042'  "Message Number
+                            LV_FILENAME_FULL "Message Variant 1
+                            '' "Message Variant 2
+                            '' "Message Variant 3
+                            ''. "Message Variant 4
+        IF GV_SVF_LOG_DELETE = 'X'.
+          DELETE DATASET LV_FILENAME_FULL.
+          IF SY-SUBRC = 0.
+            CONTINUE.
+          ELSE.
+* Archive log file. Move it to ZSVF_LOG_HIS.
+            LV_DOC_TYPE_TARGET = GC_DOC_TYPE_LOG_HIS.
+          ENDIF.
+        ENDIF.
+      WHEN 1.
+* Delete empty file
+        DELETE DATASET LV_FILENAME_FULL.
+        IF SY-SUBRC = 0.
+          CONTINUE.
+        ELSE.
+          LV_DOC_TYPE_TARGET = GC_DOC_TYPE_LOG_HIS.
+        ENDIF.
+      WHEN OTHERS.
+* Move log file to path ZSVF_LOG_ERR.
+        LV_DOC_TYPE_TARGET = GC_DOC_TYPE_LOG_ERR.
+    ENDCASE.
+
+*----------------------------------------------------------------------*
+* Move Log File
+*----------------------------------------------------------------------*
+    CHECK LV_DOC_TYPE_TARGET IS NOT INITIAL.
+    CALL FUNCTION 'Z_SVF_SVFLOG_MOVE'
+      EXPORTING
+        I_DOC_TYPE_SOURCE         = GC_DOC_TYPE_LOG
+        I_DOC_TYPE_TARGET         = LV_DOC_TYPE_TARGET
+        I_FILE_NAME               = LW_DIR_LIST-NAME
+*      IMPORTING
+*       O_LOGICAL_PATH_TARGET     =
+      EXCEPTIONS
+        SOURCE_LOGICAL_PATH_ERROR = 1
+        TARGET_LOGICAL_PATH_ERROR = 2
+        OTHERS                    = 3.
+
+    IF SY-SUBRC <> 0.
+* Log
+      "## SVF Log############ &
+      MACRO_SVF_LOG_WRITE_1 'E' "Message Type
+                            '022' "Message Number
+                            LW_DIR_LIST-NAME "Message Variant 1
+                            LV_DOC_TYPE_TARGET "Message Variant 2
+                            '' "Message Variant 3
+                            ''. "Message Variant 4
+* Message and exception
+      MESSAGE S022(ZSVF) WITH LW_DIR_LIST-NAME DISPLAY LIKE 'E'.
+      RAISE SVFLOG_FILE_MOVING_ERROR.
+    ENDIF.
+  ENDLOOP. "LOOP AT LT_DIR_LIST
+
+ENDFUNCTION.

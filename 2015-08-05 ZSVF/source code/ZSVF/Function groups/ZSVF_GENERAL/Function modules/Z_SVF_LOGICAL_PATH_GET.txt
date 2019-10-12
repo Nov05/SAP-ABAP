@@ -1,0 +1,36 @@
+FUNCTION Z_SVF_LOGICAL_PATH_GET.
+*"----------------------------------------------------------------------
+*"*"Local Interface:
+*"  IMPORTING
+*"     VALUE(I_DOC_TYPE)
+*"  EXPORTING
+*"     VALUE(O_LOGICAL_PATH) TYPE  FILENAME-FILEINTERN
+*"----------------------------------------------------------------------
+*----------------------------------------------------------------------*
+* 2. 2014-09-19 Changed by Arwen Liu
+* ZSVF_CSV  Store CSV files for all Document Types
+* ZSVF_LOG  Store SVF print result log
+* ZSVF_LOG_HIS
+* ZSVF_LOG_ERR
+* ZSVF_ROOT	SVF ROOT
+* ZSVF_JAR  Store SVF .jar file
+*----------------------------------------------------------------------*
+  DATA: LV_DOC_TYPE(20) TYPE C,
+        LW_DD07L        TYPE DD07L. "R/3 DD: values for the domains
+
+  CLEAR O_LOGICAL_PATH.
+  CHECK I_DOC_TYPE IS NOT INITIAL.
+
+  SELECT SINGLE * FROM DD07L INTO LW_DD07L
+    WHERE DOMNAME = 'ZSVF_DOC_TYPE'
+    AND DOMVALUE_L = I_DOC_TYPE.
+  IF SY-SUBRC = 0.
+    LV_DOC_TYPE = GC_DOC_TYPE_CSV.
+  ELSE.
+    LV_DOC_TYPE = I_DOC_TYPE.
+  ENDIF.
+
+  CONDENSE LV_DOC_TYPE NO-GAPS.
+  CONCATENATE 'ZSVF_' LV_DOC_TYPE INTO O_LOGICAL_PATH.
+
+ENDFUNCTION.

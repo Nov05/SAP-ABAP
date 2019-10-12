@@ -1,0 +1,14 @@
+Text-symbols
+001	Backlog
+002	Imm. Reqt
+ER1	1st Reminder
+ER2	2nd Reminder
+ER3	3rd Reminder
+ERI	th Reminder
+MA1	1st Exped.
+MA2	2nd Exped.
+MA3	3rd Exped.
+MAH	th Exped.
+TIM	Time
+ZBT	Terms of Payment:
+

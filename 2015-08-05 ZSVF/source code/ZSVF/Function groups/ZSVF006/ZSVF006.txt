@@ -1,0 +1,21 @@
+* regenerated at 2015/03/20 10:36:35
+*******************************************************************
+*   System-defined Include-files.                                 *
+*******************************************************************
+  INCLUDE LZSVF006TOP.                       " Global Data
+  INCLUDE LZSVF006UXX.                       " Function Modules
+
+*******************************************************************
+*   User-defined Include-files (if necessary).                    *
+*******************************************************************
+* INCLUDE LZSVF006F...                       " Subroutines
+* INCLUDE LZSVF006O...                       " PBO-Modules
+* INCLUDE LZSVF006I...                       " PAI-Modules
+* INCLUDE LZSVF006E...                       " Events
+* INCLUDE LZSVF006P...                       " Local class implement.
+* INCLUDE LZSVF006T99.                       " ABAP Unit tests
+  INCLUDE LZSVF006F00                             . " subprograms
+  INCLUDE LZSVF006I00                             . " PAI modules
+  INCLUDE LSVIMFXX                                . " subprograms
+  INCLUDE LSVIMOXX                                . " PBO modules
+  INCLUDE LSVIMIXX                                . " PAI modules

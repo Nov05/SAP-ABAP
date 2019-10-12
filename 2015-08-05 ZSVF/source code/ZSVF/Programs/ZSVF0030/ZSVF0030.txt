@@ -1,0 +1,112 @@
+***********************************************************************
+* Project Name : D**kin DCC Upgrading - SVF
+* Program Name : ZSVF0030
+* Description  : SVF Inspection Lot Print
+* Date/Autohr  : 2014-09-19 / Nov05
+***********************************************************************
+* Configuration Path:
+*  [SRPO]-> Quality Management
+*        -> Quality Inspection
+*        -> Define Print Control, Forms, Print Programs
+*        -> List = LV01, Inspection Instructiong
+*        -> Print Program Name = RQEEAS20
+***********************************************************************
+* M O D I F I C A T I O N  L O G
+***********************************************************************
+* ChangeDate  Programmer  Request     Description
+* ==========  ==========  ==========  =================================
+*
+***********************************************************************
+REPORT  ZSVF0030
+*   NO STANDARD PAGE HEADING
+*   LINE-SIZE 120
+*   LINE-COUNT 90
+MESSAGE-ID ZSVF.
+*======================================================================*
+*  Selection Screen
+*======================================================================*
+*SELECTION-SCREEN BEGIN OF BLOCK BLK01 WITH FRAME TITLE TEXT-B01.
+*SELECTION-SCREEN END OF BLOCK BLK01.
+*======================================================================*
+*  Includes
+*======================================================================*
+*** Global Data Declear
+*INCLUDE ZSVF0030_c01.  "Class Definition
+INCLUDE RQEEAS21.       "Global
+INCLUDE ZSVF_TOP01.     "Global Variable
+INCLUDE ZSVF_TOP02.     "Macros
+INCLUDE ZSVF0030_TOP.   "Global Variable
+*INCLUDE ZSVF0030_o01.  "PBO
+*INCLUDE ZSVF0030_i01.  "PAI
+INCLUDE ZSVF0030_F01.   "Subroutine(FORMS)
+*======================================================================*
+*  Selection Screen Events
+*======================================================================*
+*** Maintain Selection Screen Output
+*AT SELECTION-SCREEN OUTPUT.
+
+*** F4 Value Help
+*AT SELECTION-SCREEN ON VALUE-REQUEST FOR p_path.
+*  PERFORM frm_f4_path CHANGING p_path.
+
+*** Check Input Data
+*AT SELECTION-SCREEN.
+
+*AT SELECTION-SCREEN ON <f>.
+*AT SELECTION-SCREEN ON BLOCK <>.
+****CHECK ON SELECT SCREEN INPUT
+
+*======================================================================*
+*  Report events
+*======================================================================*
+*** initial data
+*INITIALIZATION.
+
+*** Prepare Report Data
+START-OF-SELECTION.
+* first step in printing a inspection instruction - read data
+*  PERFORM READING_DATA(RQEEAS20) IF FOUND.
+  PERFORM READING_DATA.
+
+* Check data
+  IF QALS-PRUEFLOS IS INITIAL.
+    MESSAGE I999. "###########
+    LEAVE PROGRAM.
+  ENDIF.
+
+*** Output Report
+END-OF-SELECTION.
+  PERFORM FRM_PROCESS_DATA.
+  PERFORM FRM_OUTPUT_DATA.
+
+* 2015-02-27 #QA01/QA02/QA03#####Type I#######
+*            ##############
+*  MESSAGE I997. "#####
+* ##### & #####
+  CALL FUNCTION 'Z_SVF_MESSAGE_TYPE'
+    EXPORTING
+      I_TCODE = SY-TCODE
+*     I_MSGID = 'ZSVF'
+      I_MSGNO = '601'
+      I_MSGV1 = QALS-PRUEFLOS
+      I_MSGV2 = GV_PRINT_EXCEPTION
+*     I_MSGV3 =
+*     I_MSGV4 =
+    .
+*======================================================================*
+*  List events
+*======================================================================*
+*** Page header
+*TOP-OF-PAGE.
+
+*** Page Header After First List
+*TOP-OF-PAGE DURING LINE-SELECTION.
+
+*** Page Footer
+*END-OF-PAGE.
+
+*** When Double Click
+*AT LINE-SELECTION.
+
+*** When Click Some Icon (function code)
+*AT USER-COMMAND.

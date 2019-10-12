@@ -1,0 +1,32 @@
+FUNCTION Z_SVF_COPYID_DEQUEUE .
+*"----------------------------------------------------------------------
+*"*"#####
+*"  IMPORTING
+*"     VALUE(I_DOC_TYPE) TYPE  ZSVF_DOC_TYPE
+*"     VALUE(I_DOC_NUM)
+*"     VALUE(I_DOC_ITEM) OPTIONAL
+*"  EXCEPTIONS
+*"      EQUEUE_DOC_ID_FAILURE
+*"----------------------------------------------------------------------
+  DATA: LV_DOC_NUM  TYPE ZSVF_DOC_NUM,
+        LV_DOC_ITEM TYPE ZSVF_DOC_ITEM.
+
+  LV_DOC_NUM  = I_DOC_NUM.
+  LV_DOC_ITEM = I_DOC_ITEM.
+
+  CALL FUNCTION 'DEQUEUE_EZSVF001_DOC_ID'
+    EXPORTING
+*     MODE_ZSVF001  = 'E'
+*     MANDT         = SY-MANDT
+      ZSVF_DOC_TYPE = I_DOC_TYPE
+      ZSVF_DOC_NUM  = LV_DOC_NUM
+      ZSVF_DOC_ITEM = LV_DOC_ITEM
+*     X_ZSVF_DOC_TYPE       = ' '
+*     X_ZSVF_DOC_NUM        = ' '
+*     X_ZSVF_DOC_ITEM       = ' '
+*     _SCOPE        = '3'
+*     _SYNCHRON     = ' '
+*     _COLLECT      = ' '
+    .
+
+ENDFUNCTION.

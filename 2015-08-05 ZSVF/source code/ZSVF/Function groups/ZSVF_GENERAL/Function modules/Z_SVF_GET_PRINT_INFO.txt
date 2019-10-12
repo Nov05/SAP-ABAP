@@ -1,0 +1,238 @@
+FUNCTION Z_SVF_GET_PRINT_INFO.
+*"----------------------------------------------------------------------
+*"*"Local Interface:
+*"  IMPORTING
+*"     VALUE(I_PRINT_KEY) TYPE  ZSVF001_KEY
+*"     VALUE(I_BUKRS) TYPE  BUKRS OPTIONAL
+*"     VALUE(I_USERID) TYPE  ZSVF_USERID DEFAULT SY-UNAME
+*"     VALUE(I_PDDEPT) TYPE  ZSVF_PDDEPT OPTIONAL
+*"     VALUE(I_PDLINE) TYPE  ZSVF_PDLINE OPTIONAL
+*"     VALUE(I_SLOC) TYPE  AFPO-LGORT OPTIONAL
+*"     VALUE(I_PURGP) TYPE  BKGRP OPTIONAL
+*"     VALUE(I_PRCRID) TYPE  ZSVF_PRCRID OPTIONAL
+*"  TABLES
+*"      OT_ZSVF005 STRUCTURE  ZSVF005
+*"  EXCEPTIONS
+*"      NO_PRINT_CONFIG_FOUND
+*"      NO_PRINTER_FOUND
+*"----------------------------------------------------------------------
+  TYPES: BEGIN OF LTY_CONFIG,
+           SEQUENCE TYPE I.
+          INCLUDE TYPE ZSVF012.
+  TYPES END OF LTY_CONFIG.
+
+  DATA: LT_ZSVF004         TYPE TABLE OF ZSVF004,
+        LW_ZSVF004         TYPE ZSVF004,
+        LW_ZSVF004_MATCHED TYPE ZSVF004,
+        LT_ZSVF012         TYPE TABLE OF ZSVF012,
+        LW_ZSVF012         TYPE ZSVF012,
+        LT_CONFIG          TYPE TABLE OF LTY_CONFIG,
+        LW_CONFIG          TYPE LTY_CONFIG,
+        LV_ENTRY_MATCHED   TYPE C, "ZSVF012 entry matched input
+        LV_SEQUENCE        TYPE I,
+        LV_SMTP_ADDR       TYPE AD_SMTPADR.
+
+  FIELD-SYMBOLS: <LFS_ZSVF005> TYPE ZSVF005,
+                 <LFS_004>     TYPE ANY,
+                 <LFS_012>     TYPE ANY,
+                 <LFS_INPUT>   TYPE ANY.
+
+* macros
+  DEFINE MACRO_MATCH_ENTRIES.
+    UNASSIGN: <LFS_004>, <LFS_012>, <LFS_INPUT>.
+    ASSIGN: LW_ZSVF004-&1 TO <LFS_004>,
+            LW_ZSVF012-&2 TO <LFS_012>,
+            &3 TO <LFS_INPUT>.
+    CONDENSE <LFS_012>. TRANSLATE <LFS_012> TO UPPER CASE.
+
+    CHECK <LFS_004> <> 'X' AND <LFS_012> IS INITIAL                                        "User ID ######
+          OR ( <LFS_INPUT> IS NOT INITIAL AND <LFS_004> = 'X' AND <LFS_012> IS NOT INITIAL "User ID #####
+               AND ( <LFS_012> <> '*' AND <LFS_012> = <LFS_INPUT>                          "User ID ########## User ID ##
+                     OR <LFS_012> = '*'                                                    "User ID ######## User ID ###
+                    )
+              ).
+  END-OF-DEFINITION.
+
+  CLEAR OT_ZSVF005[].
+*-----------------------------------------------------------------------
+* ############
+*-----------------------------------------------------------------------
+  SELECT * FROM ZSVF004 INTO TABLE LT_ZSVF004
+    WHERE ZSVF_DOC_TYPE = I_PRINT_KEY-ZSVF_DOC_TYPE
+    AND BUKRS = I_BUKRS.
+
+  IF SY-SUBRC <> 0.
+* Log ########################### ZSVF004
+    MACRO_SVF_LOG_WRITE I_PRINT_KEY "Print request Key
+                        'E' "Message Type
+                        '009' "Message Number
+                        '' "Message Variant 1
+                        '' "Message Variant 2
+                        '' "Message Variant 3
+                        ''. "Message Variant 4
+    MESSAGE S009(ZSVF) RAISING NO_PRINT_CONFIG_FOUND.
+  ENDIF.
+*-----------------------------------------------------------------------
+* #####
+*-----------------------------------------------------------------------
+  SELECT * FROM ZSVF012 INTO TABLE LT_ZSVF012
+    WHERE ZSVF_DOC_TYPE = I_PRINT_KEY-ZSVF_DOC_TYPE.
+
+  IF SY-SUBRC <> 0.
+* Log ########################### ZSVF012
+    MACRO_SVF_LOG_WRITE I_PRINT_KEY "Print request Key
+                        'W'    "Message Type
+                        '015'  "Message Number
+                        '' "Message Variant 1
+                        '' "Message Variant 2
+                        '' "Message Variant 3
+                        ''. "Message Variant 4
+    MESSAGE S015(ZSVF) RAISING NO_PRINT_CONFIG_FOUND.
+  ENDIF.
+*-----------------------------------------------------------------------
+* #######
+*-----------------------------------------------------------------------
+  SORT LT_ZSVF004 BY ZSVF_PRTPTY ASCENDING.
+
+  CLEAR LV_ENTRY_MATCHED.
+  LOOP AT LT_ZSVF004 INTO LW_ZSVF004."#################
+    IF LV_ENTRY_MATCHED = 'X'.
+      EXIT. "exit loop at lt_zsvf004
+    ENDIF.
+
+    LOOP AT LT_ZSVF012 INTO LW_ZSVF012."##########
+      CLEAR LV_SEQUENCE.
+* Compare User ID
+      MACRO_MATCH_ENTRIES ZSVF_USERID_F ZSVF_USERID I_USERID.
+      IF LW_ZSVF012-ZSVF_USERID = '*'.
+        LV_SEQUENCE = LV_SEQUENCE + 1.
+      ENDIF.
+
+* Compare Production Department
+      MACRO_MATCH_ENTRIES ZSVF_PDDEPT_F ZSVF_PDDEPT I_PDDEPT.
+* Compare Production Line
+      MACRO_MATCH_ENTRIES ZSVF_PDLINE_F ZSVF_PDLINE I_PDLINE.
+* Compare Storage Location
+      MACRO_MATCH_ENTRIES ZSVF_SLOC_F ZSVF_SLOC I_SLOC.
+* Compare Purchase Group
+      MACRO_MATCH_ENTRIES ZSVF_PURGP_F ZSVF_PURGP I_PURGP.
+
+* Compare ####### ID
+      MACRO_MATCH_ENTRIES ZSVF_PRCRID_F ZSVF_PRCRID I_PRCRID.
+      IF LW_ZSVF012-ZSVF_PRCRID = '*'.
+        LV_SEQUENCE = LV_SEQUENCE + 1.
+      ENDIF.
+
+* Entry matched in ZSVF012
+      LV_ENTRY_MATCHED = 'X'.
+      CLEAR LW_ZSVF004_MATCHED.
+      LW_ZSVF004_MATCHED = LW_ZSVF004.
+      CLEAR LW_CONFIG.
+      MOVE-CORRESPONDING LW_ZSVF012 TO LW_CONFIG.
+      LW_CONFIG-SEQUENCE = LV_SEQUENCE.
+      APPEND LW_CONFIG TO LT_CONFIG.
+
+    ENDLOOP. "LOOP AT lt_zsvf012 INTO lw_zsvf012.
+  ENDLOOP. "LOOP AT lt_zsvf004 INTO lw_zsvf004.
+
+  IF LV_ENTRY_MATCHED <> 'X'. "##########
+    " Log ########################### ZSVF004#ZSVF012
+    MACRO_SVF_LOG_WRITE I_PRINT_KEY "Print request Key
+                        'E'    "Message Type
+                        '016'  "Message Number
+                        '' "Message Variant 1
+                        '' "Message Variant 2
+                        '' "Message Variant 3
+                        ''. "Message Variant 4
+    MESSAGE S016(ZSVF) RAISING NO_PRINT_CONFIG_FOUND.
+  ENDIF.
+
+  SORT LT_CONFIG BY SEQUENCE ASCENDING.
+  READ TABLE LT_CONFIG INTO LW_CONFIG INDEX 1.
+*-----------------------------------------------------------------------
+* Get Physical Printer Information
+*-----------------------------------------------------------------------
+  SELECT * FROM ZSVF005 INTO TABLE OT_ZSVF005
+    WHERE ZSVF_DOC_TYPE = I_PRINT_KEY-ZSVF_DOC_TYPE
+    AND ZSVF_PRTID = LW_CONFIG-ZSVF_PRTID
+    AND ZSVF_INACTIVE <> 'X'.
+
+  IF SY-SUBRC <> 0.
+    " Log ########################### ZSVF005
+    MACRO_SVF_LOG_WRITE I_PRINT_KEY "Print request Key
+                        'E'    "Message Type
+                        '017'  "Message Number
+                        '' "Message Variant 1
+                        '' "Message Variant 2
+                        '' "Message Variant 3
+                        ''. "Message Variant 4
+    MESSAGE S017(ZSVF) RAISING NO_PRINT_CONFIG_FOUND.
+  ENDIF.
+
+  SORT OT_ZSVF005 BY ZSVF_PRT_CONT.
+
+* Get email address
+  DEFINE MACRO_APPEND_EMAIL_ADDR.
+    IF LV_SMTP_ADDR IS NOT INITIAL.
+      IF <LFS_ZSVF005>-ZSVF_PRTNAME IS INITIAL.
+       "2015-03-24 Changed to: not start with 'Email:'
+*        "Start with 'Email:'
+*        CONCATENATE 'Email:' LV_SMTP_ADDR INTO <LFS_ZSVF005>-ZSVF_PRTNAME.
+        <LFS_ZSVF005>-ZSVF_PRTNAME = LV_SMTP_ADDR.
+      ELSE.
+        "check whether same email is already added
+        FIND FIRST OCCURRENCE OF LV_SMTP_ADDR IN <LFS_ZSVF005>-ZSVF_PRTNAME.
+        IF SY-SUBRC <> 0.
+          CONCATENATE <LFS_ZSVF005>-ZSVF_PRTNAME LV_SMTP_ADDR
+                 INTO <LFS_ZSVF005>-ZSVF_PRTNAME
+                 SEPARATED BY ';'.
+        ENDIF.
+      ENDIF.
+    ENDIF.
+  END-OF-DEFINITION.
+
+  LOOP AT OT_ZSVF005 ASSIGNING <LFS_ZSVF005>
+    WHERE ZSVF_PRTTYPE = GC_PRTTYPE_EMAIL
+    AND ZSVF_PRTNAME IS INITIAL.
+
+    IF LW_ZSVF004_MATCHED-ZSVF_USERID_F = 'X'.
+      PERFORM FRM_GET_SMTP_ADDR_USERID USING LW_CONFIG-ZSVF_USERID "BNAME
+                                       CHANGING LV_SMTP_ADDR.
+      MACRO_APPEND_EMAIL_ADDR.
+    ENDIF.
+
+    IF LW_ZSVF004_MATCHED-ZSVF_PRCRID_F = 'X'.
+      PERFORM FRM_GET_SMTP_ADDR_PRCRID USING LW_CONFIG-ZSVF_PRCRID "BNAME
+                                       CHANGING LV_SMTP_ADDR.
+      MACRO_APPEND_EMAIL_ADDR.
+    ENDIF.
+
+* If not found, error log
+    IF <LFS_ZSVF005>-ZSVF_PRTNAME IS INITIAL.
+      "Log ########## ADR6 ##### & & ####
+      MACRO_SVF_LOG_WRITE I_PRINT_KEY "Print request Key
+                          'W'    "Message Type
+                          '010'  "Message Number
+                          LW_CONFIG-ZSVF_USERID "Message Variant 1
+                          LW_CONFIG-ZSVF_PRCRID "Message Variant 2
+                          '' "Message Variant 3
+                          ''. "Message Variant 4
+      MESSAGE S010(ZSVF).
+    ENDIF.
+  ENDLOOP.
+
+* 2015-03-05 Deletion. ############
+*  DELETE OT_ZSVF005 WHERE ZSVF_PRTNAME IS INITIAL.
+
+  IF OT_ZSVF005[] IS INITIAL.
+    MACRO_SVF_LOG_WRITE I_PRINT_KEY "Print request Key
+                        'W'    "Message Type
+                        '020'  "Message Number
+                        '' "Message Variant 1
+                        '' "Message Variant 2
+                        '' "Message Variant 3
+                        ''. "Message Variant 4
+    MESSAGE S020(ZSVF) RAISING NO_PRINTER_FOUND. "##########
+  ENDIF.
+
+ENDFUNCTION.

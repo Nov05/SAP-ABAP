@@ -1,0 +1,32 @@
+FUNCTION Z_SVF_GET_TEXT_POOL_SINGLE.
+*"----------------------------------------------------------------------
+*"*"Local Interface:
+*"  IMPORTING
+*"     VALUE(I_CPROG) TYPE  SY-CPROG DEFAULT SY-CPROG
+*"     VALUE(I_LANGU) TYPE  SY-LANGU DEFAULT SY-LANGU
+*"     VALUE(I_ID) TYPE  TEXTPOOLID DEFAULT 'I'
+*"     VALUE(I_KEY) TYPE  TEXTPOOLKY
+*"  EXPORTING
+*"     VALUE(O_ENTRY)
+*"     VALUE(O_LENGTH) TYPE  TEXTPOOLLN
+*"----------------------------------------------------------------------
+
+  DATA: LT_TEXTPOOL TYPE TABLE OF TEXTPOOL,
+        LW_TEXTPOOL TYPE TEXTPOOL,
+        LV_ENTRY    TYPE TEXTPOOLTX.
+
+  CLEAR: O_ENTRY,
+         O_LENGTH.
+
+  READ TEXTPOOL I_CPROG INTO LT_TEXTPOOL LANGUAGE I_LANGU.
+  CHECK SY-SUBRC = 0.
+
+  READ TABLE LT_TEXTPOOL INTO LW_TEXTPOOL WITH KEY ID = I_ID
+                                                   KEY = I_KEY.
+  CHECK SY-SUBRC = 0.
+
+  LV_ENTRY = LW_TEXTPOOL-ENTRY.
+  O_ENTRY = LV_ENTRY.
+  O_LENGTH = LW_TEXTPOOL-LENGTH.
+
+ENDFUNCTION.

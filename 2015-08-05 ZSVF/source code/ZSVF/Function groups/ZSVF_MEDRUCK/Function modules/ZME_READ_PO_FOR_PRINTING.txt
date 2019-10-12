@@ -1,0 +1,909 @@
+FUNCTION ZME_READ_PO_FOR_PRINTING .
+*"----------------------------------------------------------------------
+*"*"Local Interface:
+*"  IMPORTING
+*"     REFERENCE(IX_NAST) LIKE  NAST STRUCTURE  NAST
+*"     REFERENCE(IX_SCREEN)
+*"     VALUE(I_DELETED_ITEM) TYPE  XFELD DEFAULT ''
+*"     VALUE(I_SPECIFY_ITEM) TYPE  XFELD DEFAULT 'X'
+*"  EXPORTING
+*"     REFERENCE(EX_RETCO)
+*"     REFERENCE(DOC) TYPE  MEEIN_PURCHASE_DOC_PRINT
+*"     REFERENCE(EX_NAST) LIKE  NAST STRUCTURE  NAST
+*"  CHANGING
+*"     REFERENCE(CX_DRUVO) TYPE  DRUVO
+*"     REFERENCE(CX_FROM_MEMORY) DEFAULT SPACE
+*"  EXCEPTIONS
+*"      ITEM_SPECIFICATION_ERROR
+*"----------------------------------------------------------------------
+*- 1. zuerst werden die Tabellen EKKO,EKPO und EKET  gefüllt
+*- 2. dann werden Kopfdaten ermittelt
+*- 3. Dann kommt eine gr. Schleife über alle Positionen, in der auch die
+*-    Einteilungsbearbeitung stattfindet. In dem Loop wird auch die
+*-    pekpo gefüllt. Die Prüfung auf Übereinstimmung der Positionsdaten
+*-    gilt für alle Positionen nicht nur für die wegen Änderungen
+*     übermittelten. Daher erst prüfen und dann bereinigen.
+*-    Dies gilt aber nicht für gelöscht Positionen oder solche
+*-    Unterpositionen, die grundsätzlich nicht gedruckt werden.
+*- 4. nach dem Positionsloop werden die Pekkofelder gefüllt und
+*-    die EKPO bereinigt.
+*- 5. das Feld ex_nast-tcode wird verwendet um den Fall PREVIEW zu
+*-    erkennen.
+*- 6. die NAST wird nicht mittels changing übergeben, damit temporäre
+*-    Änderungen nicht auf die Datenbank kommen
+*- 7. das Feld ix_druvo soll änderbar sein, damit spare ich eine
+*-    zusätzlich Variable, da bei Preview gewechselt werden muß
+*- 8. ex_retco: 1 = keine druckrelevanten Änderungen für Änderungsdruck
+*-              9 = Fehler bei Daten lesen EKKO/EKPO
+*-       für Nast: 0 = erfolgreich     => nast-vstat = 1
+*-                 1 = fehlerhaft      => nast-vstat = 2
+*-                 3 = Beleg unvollst. => kein NAST update
+*----------------------------------------------------------------------*
+
+* docu: =======================
+* docu: ME_READ_PO_FOR_PRINTING
+* docu: =======================
+
+* docu: lokale Hilfsfelder
+  DATA: FLAG, FLAG1,                   "allgemeines Kennzeichen
+        AENDERNSRV,                    "bei dienstleistungspos
+        XETDRK,                        "Kz für Änderung aus Dispo
+        H_TABIX LIKE SY-TABIX.
+  DATA: CS_ISC_READ_DATA_FROM_DB TYPE ISC_READ_DATA_FROM_DB. " IS2ERP.
+
+* 2015-03-02 Added by Arwen
+* # IX_NAST ###################
+  DATA: LR_EBELP       TYPE RANGE OF EBELP WITH HEADER LINE,
+        LV_STR_ITEMS   TYPE STRING,
+        LT_STR         TYPE TABLE OF STRING,
+        LV_STR         TYPE STRING,
+        LV_HIGH        TYPE STRING,
+        LV_LOW         TYPE STRING,
+        LV_MATCH_COUNT TYPE I.
+
+* docu: Zurücksetzen Tabellen
+  CLEAR: DOC, EX_RETCO.
+  CLEAR: RM06P.
+  EX_NAST = IX_NAST.
+
+* Refresh internal partner tables,
+* not in PREVIEW case,
+* not in case the message is sent immediately
+  IF IX_SCREEN EQ SPACE AND EX_NAST-VSZTP NE 4.             "622813
+    CALL FUNCTION 'MM_REFRESH_PARTNERS'.
+  ENDIF.
+
+* Witch tables will be filled
+  DEF_BREAK '051 - Printing '.                              "#EC *
+
+* docu: Daten beschaffen
+  PERFORM READ_DATA_FROM_DB TABLES DOC-XEKPO DOC-XEKET
+                                   DOC-XEKEK DOC-XEKEH DOC-XEKKN
+                            USING  IX_NAST
+                                   CX_DRUVO
+                            CHANGING CX_FROM_MEMORY DOC-XTKOMV
+                                     DOC-XEKKO EX_RETCO
+                                     CS_ISC_READ_DATA_FROM_DB.
+*ENHANCEMENT-POINT ME_READ_PO_FOR_PRINTING_03 SPOTS ES_SAPLMEDRUCK.
+
+  CHECK EX_RETCO EQ 0.
+  EKKO = DOC-XEKKO.
+* docu: nur freigegebene Belege ausgeben.
+  IF CX_FROM_MEMORY IS INITIAL AND IX_SCREEN IS INITIAL AND
+      ( NOT EKKO-FRGRL IS INITIAL OR NOT IX_NAST-SNDDR IS INITIAL ).
+    PERFORM PROTOCOL_UPDATE USING '390' EKKO-EBELN SPACE SPACE SPACE.
+    EX_RETCO = '3'.
+    EXIT.
+  ENDIF.
+
+* damit auch bei Änderungsnachrichten der Preview funktioniert
+* besser ist es, vorher schon eine Warnmeldung zu prozessieren
+* um den Anwender über die Funktionalität zu informieren
+  IF NOT CX_FROM_MEMORY IS INITIAL.
+    CLEAR EX_NAST-AENDE.
+    IF CX_DRUVO = AEND.
+      CX_DRUVO = NEU.
+    ENDIF.
+  ENDIF.
+
+* docu: Lesen Änderungsbelege bei Änderungsdruck
+  IF CX_DRUVO EQ AEND OR CX_DRUVO EQ LPAE.
+    SELECT DATVR UHRVR INTO (*NAST-DATVR, *NAST-UHRVR) FROM NAST
+             WHERE KAPPL EQ IX_NAST-KAPPL
+               AND KSCHL EQ IX_NAST-KSCHL
+               AND OBJKY EQ IX_NAST-OBJKY
+               AND VSTAT EQ '1'
+       ORDER BY DATVR DESCENDING UHRVR DESCENDING.
+      EXIT.
+    ENDSELECT.
+
+* If no NEU-Message could be found above, we read any NEU-message of
+* that purchase document and use the latest timestamp of these messages
+* for the fields *nast-datvr and *nast-uhrvr.
+    IF SY-SUBRC NE 0.                                   "Begin of 549924
+      DATA: NEU_MESSAGETYPES LIKE T161M OCCURS 0 WITH HEADER LINE.
+      DATA: BEGIN OF TIME_TAB OCCURS 0,
+              DATVR LIKE NAST-DATVR,
+              UHRVR LIKE NAST-UHRVR,
+            END OF TIME_TAB.
+
+* Read all messagetypes that are allowed for NEU-Messages
+      SELECT * FROM T161M INTO TABLE NEU_MESSAGETYPES
+        WHERE KVEWE EQ 'B'
+        AND   KAPPL EQ IX_NAST-KAPPL
+        AND   KSCHL NE IX_NAST-KSCHL
+        AND   DRUVO EQ NEU.
+      IF SY-SUBRC EQ 0.
+        LOOP AT NEU_MESSAGETYPES.
+          SELECT DATVR UHRVR INTO TIME_TAB FROM NAST
+             WHERE KAPPL EQ IX_NAST-KAPPL
+               AND KSCHL EQ NEU_MESSAGETYPES-KSCHL
+               AND OBJKY EQ IX_NAST-OBJKY
+               AND VSTAT EQ '1'
+             ORDER BY DATVR DESCENDING UHRVR DESCENDING.
+            EXIT.
+          ENDSELECT.
+          IF SY-SUBRC EQ 0.
+            APPEND TIME_TAB.
+          ENDIF.
+        ENDLOOP.
+        SORT TIME_TAB BY DATVR DESCENDING UHRVR DESCENDING.
+        READ TABLE TIME_TAB INDEX 1.
+        IF SY-SUBRC EQ 0.
+          *NAST-DATVR = TIME_TAB-DATVR.
+          *NAST-UHRVR = TIME_TAB-UHRVR.
+        ENDIF.
+      ENDIF.
+    ENDIF.                                                "End of 549924
+
+    CALL FUNCTION 'ME_READ_CHANGES_EINKBELEG'
+      EXPORTING
+        DOCUMENT        = DOC-XEKKO
+        DATE_OF_CHANGE  = *NAST-DATVR
+        TIME_OF_CHANGE  = *NAST-UHRVR
+        PRINT_OPERATION = CX_DRUVO
+      TABLES
+        XEKPO           = DOC-XEKPO
+        XAEND           = DOC-XAEND.
+    SORT DOC-XAEND BY TABKEY CTXNR.
+  ENDIF.
+
+* Neu bzw. Änderungsdruck ggf. mit Preisen
+  IF CX_DRUVO EQ NEU OR CX_DRUVO EQ AEND.
+    DOC-XPEKKO-PRSDR = 'X'.
+  ELSE.
+    CLEAR DOC-XPEKKO-PRSDR.
+  ENDIF.
+
+* Read Multistep Returns header data
+* Advanced Returns switch active?
+  IF CL_OPS_SWITCH_CHECK=>OPS_SFWS_SC_ADVRET1( ) EQ ABAP_TRUE.
+
+    DATA LS_PRINT_HEAD TYPE MSR_S_PRINT_HEAD.
+    DATA LV_EBELN      TYPE MSR_DOC_NR.
+    DATA LV_DOC_TYPE   TYPE MSR_DOC_TYPE.
+
+    CONSTANTS:
+      LC_DOC_TYPE_RPO  TYPE MSR_DOC_TYPE
+                       VALUE IF_MSR_TRC_C=>GC_DOC_TYPE_RPO,
+      LC_DOC_TYPE_RSTO TYPE MSR_DOC_TYPE
+                       VALUE IF_MSR_TRC_C=>GC_DOC_TYPE_RSTO.
+
+    CLEAR LV_DOC_TYPE.
+
+    MOVE DOC-XEKKO-EBELN TO LV_EBELN.
+
+    IF DOC-XEKKO-BSAKZ = 'T'.
+      LV_DOC_TYPE = LC_DOC_TYPE_RSTO.
+    ELSE.
+      LV_DOC_TYPE = LC_DOC_TYPE_RPO.
+    ENDIF.
+
+    CALL METHOD CL_MSR_TRC_SELECT=>HEADER_FOR_PRINTING
+      EXPORTING
+        IV_DOC_TYPE   = LV_DOC_TYPE
+        IV_DOC_NR     = LV_EBELN
+      IMPORTING
+        ES_PRINT_HEAD = LS_PRINT_HEAD.
+
+    MOVE-CORRESPONDING LS_PRINT_HEAD TO DOC-XPEKKO.
+
+  ENDIF.
+
+*----------------------------------------------------------------------*
+* 2015-03-02 Added by Arwen
+* # IX_NAST ###################
+*----------------------------------------------------------------------*
+  IF I_SPECIFY_ITEM = 'X'.
+* Change the item specification, e.g. 1, 3-4, to range.
+    LV_STR_ITEMS = IX_NAST-TDCOVTITLE.
+    CONDENSE LV_STR_ITEMS NO-GAPS.
+
+    IF LV_STR_ITEMS IS NOT INITIAL.
+      IF LV_STR_ITEMS CN '1234567890-,'.
+        CLEAR DOC-XEKPO[].
+        "####### & #####
+        MESSAGE S406(ZSVF) WITH LV_STR_ITEMS DISPLAY LIKE 'E'
+                           RAISING ITEM_SPECIFICATION_ERROR.
+      ELSE.
+        SPLIT LV_STR_ITEMS AT ',' INTO TABLE LT_STR.
+        LOOP AT LT_STR INTO LV_STR.
+          CHECK LV_STR IS NOT INITIAL.
+          FIND ALL OCCURRENCES OF '-' IN LV_STR MATCH COUNT LV_MATCH_COUNT.
+          IF LV_MATCH_COUNT > 1.
+            CLEAR DOC-XEKPO[].
+            "####### & #####
+            MESSAGE S406(ZSVF) WITH LV_STR_ITEMS DISPLAY LIKE 'E'
+                               RAISING ITEM_SPECIFICATION_ERROR.
+          ELSEIF LV_MATCH_COUNT = 1.
+            SPLIT LV_STR AT '-' INTO LV_LOW LV_HIGH.
+            CLEAR LR_EBELP.
+            LR_EBELP-SIGN = 'I'.
+            LR_EBELP-OPTION = 'BT'.
+            LR_EBELP-LOW = LV_LOW.
+            LR_EBELP-HIGH = LV_HIGH.
+            IF LR_EBELP-LOW > LR_EBELP-HIGH.
+              CLEAR DOC-XEKPO[].
+              "####### & #####
+              MESSAGE S406(ZSVF) WITH LV_STR_ITEMS DISPLAY LIKE 'E'
+                                 RAISING ITEM_SPECIFICATION_ERROR.
+            ENDIF.
+            APPEND LR_EBELP.
+          ELSE.
+            CLEAR LR_EBELP.
+            LR_EBELP-SIGN = 'I'.
+            LR_EBELP-OPTION = 'EQ'.
+            LR_EBELP-LOW = LV_STR.
+            APPEND LR_EBELP.
+          ENDIF.
+        ENDLOOP. "LOOP AT LT_STR
+      ENDIF. "IF LV_STR_ITEMS CN '1234567890-,'.
+    ENDIF. "IF LV_STR_ITEMS IS NOT INITIAL.
+  ENDIF. "IF I_SPECIFY_ITEM = 'X'
+
+* docu: Beginn des Positionsloop
+  LOOP AT DOC-XEKPO INTO EKPO WHERE EBELN = EKKO-EBELN.
+    H_TABIX = SY-TABIX.
+    CLEAR XPEKPO.
+    XPEKPO-EBELP = EKPO-EBELP.
+
+* 2015-03-02
+    IF EKPO-EBELP NOT IN LR_EBELP.
+      DELETE DOC-XEKPO.
+      CONTINUE.
+    ENDIF.
+
+*- falls space auf 0 setzen
+    IF EKPO-KTPNR EQ SPACE.
+      CLEAR EKPO-KTPNR.
+    ENDIF.
+*- nicht zu druckende Unterpositionen löschen
+    IF EKPO-UPTYP NE SPACE.
+      PERFORM TMSI2_LESEN USING EKPO-SIKGR.
+      IF XTMSI2-SIDRU NE SPACE.
+        DELETE DOC-XEKPO.
+        CONTINUE.                      " statt exit.
+      ENDIF.
+    ENDIF.
+
+*    ENHANCEMENT-POINT ME_READ_PO_FOR_PRINTING_01 SPOTS ES_SAPLMEDRUCK.
+* docu: nur bei Änderungsdruck gelöschte Positionen mitnehmen
+* 2015-02-28 Changed by Arwen
+    IF I_DELETED_ITEM <> 'X'. "Not including items marked as deleted
+      IF CX_DRUVO NE AEND AND EKPO-LOEKZ NE SPACE.
+        DELETE DOC-XEKPO.
+        CONTINUE.
+      ENDIF.
+    ENDIF.
+
+* docu: für alte Bestellungen Herstellerteilenr füllen
+    IF EKPO-EMATN EQ SPACE.
+      EKPO-EMATN = EKPO-MATNR.
+    ENDIF.
+
+* docu: Preiskalkulation
+    PERFORM CALC_CURRENT_PRICE USING    EKKO
+                                        EKPO
+                                        SY-DATLO
+                               CHANGING EKPO-NETPR
+                                        EKPO-NETWR
+                                        EKPO-EFFWR
+                                        EKPO-BRTWR
+                                        EKPO-ZWERT
+                                        EKPO-BONBA
+                                        EKPO-KZWI1
+                                        EKPO-KZWI2
+                                        EKPO-KZWI3
+                                        EKPO-KZWI4
+                                        EKPO-KZWI5
+                                        EKPO-KZWI6.
+
+*- Bei Retourenbestellungen Wertfelder ändern
+    IF EKPO-RETPO NE SPACE.
+      EKPO-NETWR = EKPO-NETWR * -1.
+      EKPO-BRTWR = EKPO-BRTWR * -1.
+      EKPO-EFFWR = EKPO-EFFWR * -1.
+      EKPO-BONBA = EKPO-BONBA * -1.
+      EKPO-KZWI1 = EKPO-KZWI1 * -1.
+      EKPO-KZWI2 = EKPO-KZWI2 * -1.
+      EKPO-KZWI3 = EKPO-KZWI3 * -1.
+      EKPO-KZWI4 = EKPO-KZWI4 * -1.
+      EKPO-KZWI5 = EKPO-KZWI5 * -1.
+      EKPO-KZWI6 = EKPO-KZWI6 * -1.
+    ENDIF.
+
+*- Bei Stammkonditionen und Zielmenge 0 Wertfelder zurücksetzen
+    IF ( EKKO-STAKO NE SPACE OR EKKO-BSTYP EQ BSTYP-KONT ) AND
+         EKPO-KTMNG EQ 0.
+      CLEAR: EKPO-ZWERT,    EKPO-BRTWR,       EKPO-EFFWR,
+             EKPO-BONBA,    EKPO-KZWI1,       EKPO-KZWI2,
+             EKPO-KZWI3,    EKPO-KZWI4,       EKPO-KZWI5,
+             EKPO-KZWI6.
+    ENDIF.
+
+* docu: Kennzeichen für Hilfsstruktur PEKKO setzen
+*- Kennzeichen Preisdruck gegebenenfalls zurücknehmen
+    IF EKPO-PRSDR EQ SPACE AND NOT DOC-XPEKKO-PRSDR IS INITIAL.
+      CLEAR DOC-XPEKKO-PRSDR.
+    ENDIF.
+*- Kennzeichen Unterpositionen
+    IF EKPO-UPTYP NE SPACE AND DOC-XPEKKO-HSAMM IS INITIAL.
+      DOC-XPEKKO-HSAMM = 'X'.
+    ENDIF.
+*- Position mit druckrelevanten Einteilungen aus der Disposition
+    IF EKPO-ETDRK EQ '1' AND CX_DRUVO EQ LPAE.
+      XETDRK = 'X'.
+    ENDIF.
+
+* docu: letzter WE, WE-FZ, Lieferscheinnummer, etc ermitteln
+    CALL FUNCTION 'ME_READ_LAST_GR'
+      EXPORTING
+        I_EBELN  = EKPO-EBELN
+        I_EBELP  = EKPO-EBELP
+        I_NUMBER = 3
+      IMPORTING
+        E_LFDAT  = XPEKPO-LFDAT
+        E_XBLNR  = XPEKPO-XBLNR
+        E_MENGE  = XPEKPO-LWEMG
+        E_BUDAT  = XPEKPO-BUDAT
+        E_FZWMG  = XPEKPO-WEMNG
+      TABLES
+        E_PEKPO  = DOC-XPEKPO
+      EXCEPTIONS
+        OTHERS   = 1.
+
+* docu: Einteilung mit Bestätigungen für Mahndruck abmischen
+    IF CX_DRUVO EQ LPMA OR CX_DRUVO EQ MAHN.
+      PERFORM EKET_EKES_ABMISCHEN TABLES DOC-XEKET
+                                  USING  EKPO.
+    ENDIF.
+
+* To determine whether it is a reminder or a dunning          "^_1128069
+* notice.
+* Only for Scheduling Agreements with release creation profile.
+    IF CX_DRUVO EQ LPMA.
+      PERFORM PRUEFEN_MAHNUNG_EKPO USING EKKO EKPO
+                              CHANGING EKPO-MAHNZ.
+      MODIFY DOC-XEKPO FROM EKPO.
+    ENDIF.                                                  "v_1128069
+
+    REFRESH HEKET.
+* docu: Begin des Einteilungsloop
+    LOOP AT DOC-XEKET INTO EKET WHERE EBELN = EKKO-EBELN
+                                  AND EBELP = EKPO-EBELP.
+
+* 2015-03-02 Begin of deletion by Arwen
+** docu: nichtrelevante Einteilungen löschen
+*      IF EKKO-BSTYP = BSTYP-LFPL.                           "608519
+** 1. Fall: Bei Lieferplänen mit und ohne Historie           608519
+*        IF CX_DRUVO = LPMA.
+*          IF EKET-AMENG EQ 0 AND  "###########
+*             EKET-MENGE LE 0.     "#####
+*            DELETE DOC-XEKET.
+*            CONTINUE.
+*          ENDIF.
+*        ELSE.
+*          IF EKET-MENGE EQ EKET-AMENG AND
+*             EKET-MENGE LE EKET-WEMNG.                      "658316
+*            DELETE DOC-XEKET.
+*            CONTINUE.
+*          ENDIF.
+*        ENDIF.
+*      ELSEIF EKPO-PSTYP NE PSTYP-DIEN.                      "542761
+** 2. Fall: bei Bestellung, Anfrage oder Kontrakt aber
+**          nicht bei Dienstleistung
+*        IF CX_DRUVO = MAHN.
+*          IF EKET-MENGE EQ 0.
+*            DELETE DOC-XEKET.
+*            CONTINUE.
+*          ENDIF.
+*        ELSE.
+*          IF EKET-MENGE LE EKET-WEMNG.
+*            DELETE DOC-XEKET.
+*            CONTINUE.
+*          ENDIF.
+*        ENDIF.
+*      ENDIF.
+* 2015-03-02 End of deletion by Arwen
+
+* docu: Einheitliche Einteilungsdaten erfassen (Datum und Uhrzeit)
+      IF XPEKPO-EINDT IS INITIAL AND XPEKPO-LPEIN NE '*'.
+        XPEKPO-LPEIN = EKET-LPEIN.
+        XPEKPO-UZEIT = EKET-UZEIT.
+        XPEKPO-EINDT = EKET-EINDT.
+      ENDIF.
+
+**-- Mehrere Termine pro Position                         "932937
+      IF EKPO-PSTYP NE PSTYP-DIEN.                          "1042349
+        IF XPEKPO-LPEIN NE '*' AND ( XPEKPO-EINDT NE EKET-EINDT OR
+                                    XPEKPO-UZEIT NE EKET-UZEIT OR
+                                    XPEKPO-LPEIN NE EKET-LPEIN    ) .
+          CLEAR: XPEKPO-EINDT, XPEKPO-UZEIT.
+          XPEKPO-LPEIN = '*'.
+        ENDIF.
+      ENDIF.                                                "1042349
+
+*-- Ergebnisse aus Änderungsbelegen in Einteilungstabelle übernehmen
+      IF EKKO-BSTYP EQ BSTYP-LFPL AND CX_DRUVO EQ LPAE.
+        MOVE-CORRESPONDING EKET TO *EKET.
+        MOVE-CORRESPONDING EKET TO HEKET.
+        PERFORM ALTE_DATEN_ERMITTELN TABLES DOC-XAEND
+                                     CHANGING HEKET FLAG.
+        IF FLAG = 'X'.
+          IF NOT HEKET-LPEIN IS INITIAL.
+            EKET-LPEIN = HEKET-LPEIN.
+          ENDIF.
+          IF NOT HEKET-TFLAG IS INITIAL.
+            EKET-UZEIT = HEKET-UZEIT.
+          ENDIF.
+          CLEAR EKET-MENGE.
+          CLEAR EKET-WEMNG.
+          CLEAR EKET-MAHNZ.
+          EKET-EINDT = EKET-ALTDT.
+          CLEAR *EKET-AMENG.
+          CLEAR *EKET-ALTDT.
+          APPEND *EKET TO HEKET.
+        ELSE.                          "Nur Änderungen über MRP
+*--  ansonsten auf basis altdt duplizieren
+          IF EKET-EINDT NE EKET-ALTDT  AND NOT EKET-ALTDT IS INITIAL.
+            CLEAR *EKET-AMENG.
+            CLEAR *EKET-ALTDT.
+            CLEAR EKET-MENGE.
+            CLEAR EKET-WEMNG.
+            CLEAR EKET-MAHNZ.
+            EKET-EINDT = EKET-ALTDT.
+            APPEND *EKET TO HEKET.
+          ENDIF.
+        ENDIF.
+      ENDIF.
+      IF *EKET-EINDT NE *EKET-ALTDT.
+        MODIFY DOC-XEKET FROM EKET.
+      ENDIF.
+
+* docu: Lieferantencharge übernehmen, falls vorhanden
+      IF NOT EKET-LICHA IS INITIAL.
+        XPEKPO-LICHA = EKET-LICHA.
+      ENDIF.
+
+* docu: setzen des Mahnzaehlers
+      IF CX_DRUVO EQ MAHN OR CX_DRUVO EQ LPMA.
+        PERFORM PRUEFEN_MAHNUNG USING EKKO EKPO EKET
+                                CHANGING EKET-MAHNZ.
+        MODIFY DOC-XEKET FROM EKET.
+      ENDIF.
+    ENDLOOP.
+    APPEND LINES OF HEKET TO DOC-XEKET.
+* docu: Ende Einteilungsloop
+
+* docu: Lieferdatum und -uhrzeit festlegen
+* Lieferdatum nicht für alle Positionen gleich ------------------------*
+    IF DOC-XPEKKO-LPEIN NE '*'.
+      IF XPEKPO-LPEIN EQ '*'.      "es gibt versch. Einteilungstermine
+        DOC-XPEKKO-LPEIN = '*'.
+        CLEAR DOC-XPEKKO-EINDT.
+      ELSE.
+        IF XPEKPO-LPEIN NE 0.
+          IF DOC-XPEKKO-LPEIN EQ SPACE.
+            MOVE XPEKPO-EINDT TO DOC-XPEKKO-EINDT.
+            MOVE XPEKPO-LPEIN TO DOC-XPEKKO-LPEIN.
+          ELSE.
+            IF DOC-XPEKKO-EINDT NE XPEKPO-EINDT OR
+               DOC-XPEKKO-LPEIN NE XPEKPO-LPEIN.
+              CLEAR DOC-XPEKKO-EINDT.
+              DOC-XPEKKO-LPEIN = '*'.
+            ENDIF.
+          ENDIF.
+        ENDIF.
+      ENDIF.
+    ENDIF.
+*- Bei Uhrzeitangabe Lieferdatum nicht im Kopf
+    IF NOT XPEKPO-UZEIT IS INITIAL.
+      CLEAR DOC-XPEKKO-EINDT.
+      DOC-XPEKKO-LPEIN = '*'.
+    ENDIF.
+*- Bei Anfrage und LP mit Abrufdokumentation Mahnzähler auf Position
+    XPEKPO-MAHNZ = EKPO-MAHNZ.
+
+* docu: Feststellen, ob einheitliches Werk
+    IF H_TABIX EQ 1.
+      MOVE EKPO-WERKS TO DOC-XPEKKO-WERKS.
+    ELSE.
+      IF DOC-XPEKKO-WERKS NE EKPO-WERKS.
+        DOC-XPEKKO-WERKS = '****'.
+      ENDIF.
+    ENDIF.
+    IF EKPO-ADRNR NE SPACE OR
+       EKPO-ADRN2 NE SPACE OR
+       EKPO-EMLIF NE SPACE OR
+       EKPO-KUNNR NE SPACE.
+      DOC-XPEKKO-WERKS = '****'.
+    ENDIF.
+* docu: Feststellen, ob einheitliche Anlieferungsanschrift
+    IF H_TABIX EQ 1.
+      MOVE EKPO-ADRNR TO DOC-XPEKKO-ADRNR.
+    ELSE.
+      IF DOC-XPEKKO-ADRNR NE EKPO-ADRNR.
+        DOC-XPEKKO-ADRNR = '**********'.
+      ENDIF.
+    ENDIF.
+* docu: Feststellen, ob einheitliche Adressnummer
+    IF H_TABIX EQ 1.
+      MOVE EKPO-ADRN2 TO DOC-XPEKKO-ADRN2.
+    ELSE.
+      IF DOC-XPEKKO-ADRN2 NE EKPO-ADRN2.
+        DOC-XPEKKO-ADRN2 = '**********'.
+      ENDIF.
+    ENDIF.
+* docu: Feststellen, ob einheitliche Kundennummer
+    IF H_TABIX EQ 1.
+      MOVE EKPO-KUNNR TO DOC-XPEKKO-KUNNR.
+    ELSE.
+      IF DOC-XPEKKO-KUNNR NE EKPO-KUNNR.
+        DOC-XPEKKO-KUNNR = '**********'.
+      ENDIF.
+    ENDIF.
+* docu: Feststellen, ob einheitliche Lieferantennummer
+    IF H_TABIX EQ 1.
+      MOVE EKPO-EMLIF TO DOC-XPEKKO-EMLIF.
+    ELSE.
+      IF DOC-XPEKKO-EMLIF NE EKPO-EMLIF.
+        DOC-XPEKKO-EMLIF = '**********'.
+      ENDIF.
+    ENDIF.
+* docu: Feststellen, ob einheitliche Auftragsbestätigung
+    IF H_TABIX EQ 1.
+      MOVE EKPO-LABNR TO DOC-XPEKKO-LABNR.
+    ELSE.
+      IF DOC-XPEKKO-LABNR NE EKPO-LABNR.
+        DOC-XPEKKO-LABNR = '****'.
+      ENDIF.
+    ENDIF.
+* docu: Feststellen, ob Auftragsbestätigungspflicht in jeder Position
+    IF H_TABIX EQ 1.
+      MOVE EKPO-KZABS TO DOC-XPEKKO-KZABS.
+    ELSE.
+      IF DOC-XPEKKO-KZABS NE EKPO-KZABS.
+        DOC-XPEKKO-KZABS = '*'.
+      ENDIF.
+    ENDIF.
+
+* docu: Feststellen einheitliche Incoterms
+    IF EKKO-INCO1 NE SPACE AND EKPO-INCO1 EQ SPACE.
+      EKPO-INCO1 = EKKO-INCO1.
+      EKPO-INCO2 = EKKO-INCO2.
+    ENDIF.
+    IF EKPO-STAPO EQ SPACE OR EKPO-LOEKZ NE SPACE.
+      IF FLAG1 IS INITIAL.
+        DOC-XPEKKO-INCO1 = EKPO-INCO1.
+        DOC-XPEKKO-INCO2 = EKPO-INCO2.
+        FLAG1 = 'X'.
+      ELSE.
+        IF DOC-XPEKKO-INCO1 NE '***' AND
+             ( EKPO-INCO1 NE DOC-XPEKKO-INCO1 OR
+               EKPO-INCO2 NE DOC-XPEKKO-INCO2    ) .
+          DOC-XPEKKO-INCO1 = '***'.
+          CLEAR DOC-XPEKKO-INCO2.
+        ENDIF.
+      ENDIF.
+    ENDIF.
+
+* docu: Feststellen, ob einheitliches Angebotsdatum
+    IF DOC-XEKKO-BSTYP EQ BSTYP-ANFR.
+      IF EKPO-AGDAT NE DOC-XEKKO-ANGDT.
+        CLEAR DOC-XEKKO-ANGDT.
+      ENDIF.
+    ENDIF.
+
+* docu: Nettowert aufaddieren
+    IF EKPO-STAPO EQ SPACE AND EKPO-LOEKZ EQ SPACE.
+      DOC-XPEKKO-NETWR = DOC-XPEKKO-NETWR + EKPO-NETWR.
+    ENDIF.
+
+* docu: Feststellen einheitl. Warenempfänger/Abladestelle in Position
+    LOOP AT DOC-XEKKN INTO EKKN
+                      WHERE EBELN EQ EKPO-EBELN
+                      AND   EBELP EQ EKPO-EBELP
+                      AND ( WEMPF NE SPACE OR ABLAD NE SPACE ).
+      IF XPEKPO-WEMPF IS INITIAL AND XPEKPO-ABLAD IS INITIAL.
+        XPEKPO-WEMPF = EKKN-WEMPF.
+        XPEKPO-ABLAD = EKKN-ABLAD.
+      ELSE.
+        IF XPEKPO-WEMPF NE EKKN-WEMPF OR XPEKPO-ABLAD NE EKKN-ABLAD.
+          CLEAR: XPEKPO-ABLAD, XPEKPO-WEMPF.
+          EXIT.
+        ENDIF.
+      ENDIF.
+    ENDLOOP.
+    IF NOT XPEKPO-WEMPF IS INITIAL OR NOT XPEKPO-ABLAD IS INITIAL.
+      READ TABLE DOC-XEKKN INTO EKKN WITH KEY
+                   EBELN = EKPO-EBELN
+                   EBELP = EKPO-EBELP
+                   ABLAD = SPACE
+                   WEMPF = SPACE.
+      IF SY-SUBRC EQ 0.
+        CLEAR: XPEKPO-WEMPF, XPEKPO-ABLAD.
+      ENDIF.
+    ENDIF.
+
+* docu: Ermitteln der insgesamt bereits bestätigten Menge
+    IF CX_DRUVO EQ AUFB AND EKPO-BSTAE NE SPACE.
+      SELECT SINGLE * FROM T163D WHERE IBTYP EQ '1'.
+      SELECT SUM( MENGE ) INTO (XPEKPO-BSMNG) FROM EKES
+                   WHERE EBELN = EKPO-EBELN
+                     AND EBELP = EKPO-EBELP
+                     AND EBTYP = T163D-EBTYP.
+    ENDIF.
+
+* docu: Feststellen einheitlicher Warenempfänger/Abladestelle im Beleg
+    IF DOC-XPEKKO-WEMPF NE '**' AND DOC-XPEKKO-ABLAD NE '**'.
+      IF H_TABIX EQ 1.
+        DOC-XPEKKO-WEMPF = XPEKPO-WEMPF.
+        DOC-XPEKKO-ABLAD = XPEKPO-ABLAD.
+      ELSE.
+        IF DOC-XPEKKO-WEMPF NE XPEKPO-WEMPF OR
+           DOC-XPEKKO-ABLAD NE XPEKPO-ABLAD.
+          DOC-XPEKKO-WEMPF = '**'.
+          DOC-XPEKKO-ABLAD = '**'.
+        ENDIF.
+      ENDIF.
+    ENDIF.
+
+* Read Multistep Returns item data
+* Advances Returns switch active?
+    IF CL_OPS_SWITCH_CHECK=>OPS_SFWS_SC_ADVRET1( ) EQ ABAP_TRUE.
+
+      DATA LS_PRINT_ITEM TYPE MSR_S_PRINT_ITEM.
+      DATA LV_EBELP      TYPE MSR_DOC_ITEM.
+
+      MOVE EKPO-EBELN TO LV_EBELN.
+      MOVE EKPO-EBELP TO LV_EBELP.
+
+      CALL METHOD CL_MSR_TRC_SELECT=>ITEM_FOR_PRINTING
+        EXPORTING
+          IV_DOC_TYPE   = LV_DOC_TYPE
+          IV_DOC_NR     = LV_EBELN
+          IV_DOC_ITEM   = LV_EBELP
+          IV_DOC_LANGU  = DOC-XEKKO-SPRAS
+        IMPORTING
+          ES_PRINT_ITEM = LS_PRINT_ITEM.
+
+      MOVE-CORRESPONDING LS_PRINT_ITEM TO XPEKPO.
+
+    ENDIF.
+* docu: Änderungsbelegtabelle ergänzen
+    PERFORM ERGAENZEN_XAEND USING XPEKPO
+                            CHANGING DOC-XAEND.
+    LOOP AT DOC-XPEKPO INTO PEKPO WHERE EBELP EQ EKPO-EBELP.
+      PEKPO-LPEIN = XPEKPO-LPEIN.
+      PEKPO-EINDT = XPEKPO-EINDT.
+      PEKPO-UZEIT = XPEKPO-UZEIT.
+      PEKPO-WEMPF = XPEKPO-WEMPF.
+      PEKPO-ABLAD = XPEKPO-ABLAD.
+      PEKPO-BSMNG = XPEKPO-BSMNG.
+      MODIFY DOC-XPEKPO FROM PEKPO.
+    ENDLOOP.                           "pekpo
+    IF SY-SUBRC NE 0.
+      APPEND XPEKPO TO DOC-XPEKPO.
+    ENDIF.
+    MODIFY DOC-XEKPO FROM EKPO.        "wegen Incoterms zum Beispiel
+  ENDLOOP.                             "ekpo
+* docu: Ende des Positionsloop
+
+* erst mal die Kopfänderung rausschmeissen, kommt wieder rein ---------*
+  IF EKKO-BSTYP EQ BSTYP-ANFR AND EKKO-ANGDT NE 0.
+    LOOP AT DOC-XAEND INTO XAEND WHERE CTXNR EQ 'K4'.
+      DELETE DOC-XAEND.
+    ENDLOOP.
+* keine Angebotsfriständerung auf Position ausgeben -------------------*
+    PERFORM XAEND_BEREINIGEN USING '05' 'K4'
+                             CHANGING DOC-XAEND.
+  ENDIF.
+
+*----------------------------------------------------------------------*
+* ab hier wird doc-xpekko überarbeitet
+*----------------------------------------------------------------------*
+*- Wenn Lieferdatum nicht für alle Positionen gleich auch LPEIN clearen
+  IF DOC-XPEKKO-LPEIN EQ '*'.
+    CLEAR DOC-XPEKKO-LPEIN.
+  ELSE.
+*-- Bei Mahnung Lieferdatum immer auf Positionsebene drucken
+    IF CX_DRUVO EQ MAHN.
+      CLEAR: DOC-XPEKKO-LPEIN, DOC-XPEKKO-EINDT.
+    ENDIF.
+  ENDIF.
+
+* Bei Lieferplanänderung stört PEKKO-EINDT, falls es sitzt ------------*
+  IF EKKO-BSTYP EQ BSTYP-LFPL AND ( CX_DRUVO EQ AEND OR
+                                    CX_DRUVO EQ AUFB ).
+    CLEAR: DOC-XPEKKO-LPEIN, DOC-XPEKKO-EINDT.
+  ENDIF.
+
+
+* docu: Keine einheitlichen Incoterms
+  IF DOC-XPEKKO-INCO1 EQ '***'.
+    CLEAR DOC-XPEKKO-INCO1.
+    CLEAR DOC-XPEKKO-INCO2.
+  ENDIF.
+
+* docu: Kein einheitliches Werk bei allen Positionen
+  IF DOC-XPEKKO-WERKS EQ '****'.
+    CLEAR DOC-XPEKKO-WERKS.
+  ENDIF.
+
+* docu: Keine einheitliche Kundennummer bei allen Positionen
+  IF DOC-XPEKKO-KUNNR EQ '**********'.
+    CLEAR DOC-XPEKKO-KUNNR.
+  ENDIF.
+
+* docu: Keine einheitliche Lieferantennummer bei allen Positionen
+  IF DOC-XPEKKO-EMLIF EQ '**********'.
+    CLEAR DOC-XPEKKO-EMLIF.
+  ENDIF.
+
+* docu: Keine einheitliche Adressnummer bei allen Positionen
+  IF DOC-XPEKKO-ADRN2 EQ '**********'.
+    CLEAR DOC-XPEKKO-ADRN2.
+  ENDIF.
+
+* docu: Keine einheitliche Anlieferungsanschrift bei allen Positionen
+  IF DOC-XPEKKO-ADRNR EQ '**********'.
+    CLEAR DOC-XPEKKO-ADRNR.
+  ENDIF.
+
+* docu: Keine einheitliche Auftragsbestaetigung bei allen Positionen
+  IF DOC-XPEKKO-LABNR EQ '****'.
+    CLEAR DOC-XPEKKO-KZABS.
+    CLEAR DOC-XPEKKO-LABNR.
+  ENDIF.
+
+* docu: Nicht in jeder Position Auftragsbestätigungspflicht
+  IF DOC-XPEKKO-KZABS EQ '*'.
+    CLEAR DOC-XPEKKO-KZABS.
+  ENDIF.
+
+* Lesen Anlieferungsanschrift -----------------------------------------*
+* keine Anschriftenänderung auf Position ausgeben ---------------------*
+* Einträge suchen, die von XXXXXXnummer auf Adresse geändert wurden ---*
+  IF DOC-XPEKKO-ADRNR NE SPACE OR
+     DOC-XPEKKO-EMLIF NE SPACE OR
+     DOC-XPEKKO-ADRN2 NE SPACE OR
+     DOC-XPEKKO-KUNNR NE SPACE.
+    PERFORM XAEND_BEREINIGEN USING '04' 'S5-1'
+                             CHANGING  DOC-XAEND.
+  ENDIF.
+
+* docu: keine einheitliche Abladestelle/Warenempfänger
+  IF DOC-XPEKKO-ABLAD EQ '**' AND DOC-XPEKKO-WEMPF EQ '**'.
+    CLEAR: DOC-XPEKKO-ABLAD, DOC-XPEKKO-WEMPF.
+  ENDIF.
+  IF DOC-XPEKKO-ADRNR EQ SPACE AND
+     DOC-XPEKKO-EMLIF EQ SPACE AND
+     DOC-XPEKKO-ADRN2 EQ SPACE AND
+     DOC-XPEKKO-KUNNR EQ SPACE AND
+     DOC-XPEKKO-WERKS EQ SPACE.
+    CLEAR: DOC-XPEKKO-ABLAD, DOC-XPEKKO-WEMPF.
+  ELSE.
+    IF NOT ( DOC-XPEKKO-ABLAD IS INITIAL AND
+             DOC-XPEKKO-WEMPF IS INITIAL ).
+      PERFORM XAEND_BEREINIGEN USING '06' 'AC1'
+                               CHANGING  DOC-XAEND.
+    ENDIF.
+  ENDIF.
+
+* docu: Positionstabelle bereinigen
+  CLEAR AENDERNSRV.
+  PERFORM XEKPO_BEREINIGEN USING CX_DRUVO
+                           CHANGING DOC  AENDERNSRV.
+* docu: Kundenspezifische Ergänzungen
+  CALL CUSTOMER-FUNCTION '001'
+    EXPORTING
+      IX_DRUVO = CX_DRUVO
+    IMPORTING
+      EX_RETCO = EX_RETCO
+    CHANGING
+      CX_DOC   = DOC
+    EXCEPTIONS
+      OTHERS   = 1.
+  IF SY-SUBRC NE 0.
+    PERFORM PROTOCOL_UPDATE USING '140' EKKO-EBELN SPACE SPACE SPACE.
+    EX_RETCO = 1.
+    EXIT.
+  ELSE.
+    IF EX_RETCO NE 0.
+      EXIT.
+    ENDIF.
+  ENDIF.
+
+* Check whether items for the output are existing: note 736829
+* header texts changes printed correctly - Note 794176
+  LOOP AT DOC-XAEND INTO XAEND.                             "794176
+    IF XAEND-TEXT_CASE EQ SPACE AND XAEND-EBELP NE '00000'. "794176
+      DESCRIBE TABLE DOC-XEKPO LINES SY-TFILL.
+      IF SY-TFILL = 0.
+        IF CX_DRUVO = 2.                                    "769216
+          PERFORM PROTOCOL_UPDATE USING '140' EKKO-EBELN SPACE SPACE
+          SPACE.
+        ELSE.
+          PERFORM PROTOCOL_UPDATE USING '141' EKKO-EBELN SPACE SPACE
+          SPACE.
+        ENDIF.
+        EX_RETCO = 1.
+        EXIT.
+      ENDIF.
+    ENDIF.                                                  "794176
+  ENDLOOP.                                                  " 794176
+
+* Lieferplanänderung --> entweder Änderungsbelege aus Dialog (ME38)
+*                    --> oder Kennzeichen in Position aus Disposition
+  IF CX_DRUVO EQ LPAE.
+    IF DOC-XAEND[] IS INITIAL AND XETDRK EQ SPACE.
+      PERFORM PROTOCOL_UPDATE USING '140' EKKO-EBELN SPACE SPACE SPACE.
+      EX_RETCO = 1.
+      EXIT.
+    ENDIF.
+  ENDIF.
+
+* docu: Feststellen, ob Änderungen für Druck vorhanden sind
+  IF CX_DRUVO EQ AEND.
+
+* In some cases the changed delivery address is considered as inserted
+* address and could be print out though it's non print relevant in the
+* customizing. This is not allowed.                         "583449
+    DATA: CHANGED(1) TYPE C.                                "583449
+    LOOP AT DOC-XAEND INTO XAEND.
+      IF XAEND-TABNAME(3) = 'ADR' AND XAEND-FNAME IS INITIAL AND
+         XAEND-CHNGIND = 'I'.                               "583449
+        CONTINUE.                                           "583449
+      ELSE.                                                 "583449
+        CHANGED = 'X'.                                      "583449
+        EXIT.                                               "583449
+      ENDIF.                                                "583449
+    ENDLOOP.                                                "583449
+
+    IF NOT CHANGED = 'X'.                                   "583449
+      PERFORM PROTOCOL_UPDATE USING '140'
+                     EKKO-EBELN SPACE SPACE SPACE.          "583449
+      EX_RETCO = 1.                                         "583449
+      CLEAR CHANGED.                                        "583449
+      EXIT.                                                 "583449
+    ENDIF.                                                  "583449
+
+  ENDIF.
+
+* keine Ausgabe, falls keine Positionen oder
+* nur noch Positionen mit Standardartikel vorhanden
+  IF CX_DRUVO NE AEND.
+    LOOP AT DOC-XEKPO INTO EKPO WHERE STAPO EQ SPACE.
+      EXIT.
+    ENDLOOP.
+    IF SY-SUBRC NE 0.
+      PERFORM PROTOCOL_UPDATE USING '140' EKKO-EBELN SPACE SPACE SPACE.
+      EX_RETCO = 1.
+      EXIT.
+    ENDIF.
+  ENDIF.
+  SORT DOC-XEKET BY EBELN EBELP EINDT UZEIT ETENR.
+*ENHANCEMENT-POINT ME_READ_PO_FOR_PRINTING_02 SPOTS ES_SAPLMEDRUCK.
+
+
+ENDFUNCTION.

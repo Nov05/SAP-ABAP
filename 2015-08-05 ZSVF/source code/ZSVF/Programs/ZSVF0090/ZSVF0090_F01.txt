@@ -1,0 +1,119 @@
+*&---------------------------------------------------------------------*
+*&  Include           ZSVF0090_F01
+*&---------------------------------------------------------------------*
+*&---------------------------------------------------------------------*
+*&      Form  FRM_GET_VENDOR_ADDRESS
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+*      -->P_ADRNR  text
+*      <--P_NAME1  text
+*      <--P_NAME2  text
+*      <--P_NAME3  text
+*      <--P_PSTLZ  text
+*      <--P_STRAS  text
+*      <--P_TELF1  text
+*      <--P_TELFX  text
+*----------------------------------------------------------------------*
+FORM FRM_GET_VENDOR_ADDRESS  USING    P_ADRNR
+                                 CHANGING P_NAME1
+*                                      P_NAME2
+*                                      P_NAME3
+*                                      P_PSTLZ
+*                                      P_STRAS
+*                                      P_TELF1
+*                                      P_TELFX
+      .
+  DATA:
+* Importing
+    LW_ADDRESS_SELECTION TYPE ADDR1_SEL,
+*    LW_ADDRESS_GROUP           TYPE ADRG-ADDR_GROUP,
+*    LW_READ_SADR_ONLY          TYPE SZAD_FIELD-FLAG,
+*    LW_READ_TEXTS              TYPE SZAD_FIELD-FLAG,
+*    LW_IV_CURRENT_COMM_DATA    TYPE AD_COMCURR,
+*    LW_BLK_EXCPT               TYPE AD_BLKFLAG,
+* Exporting
+    LW_ADDRESS_VALUE     TYPE ADDR1_VAL,
+*    LW_ADDRESS_ADDITIONAL_INFO TYPE AD1_FLAGS,
+*    LW_RETURNCODE              TYPE SZAD_FIELD-RETURNCODE,
+*    LW_ADDRESS_TEXT            TYPE ADDR1_TEXT,
+    LW_SADR              TYPE SADR.
+
+  CHECK P_ADRNR IS NOT INITIAL.
+  LW_ADDRESS_SELECTION-ADDRNUMBER = P_ADRNR.
+
+  CALL FUNCTION 'ADDR_GET'
+    EXPORTING
+      ADDRESS_SELECTION = LW_ADDRESS_SELECTION
+*     ADDRESS_GROUP     =
+*     READ_SADR_ONLY    = ' '
+*     READ_TEXTS        = ' '
+*     IV_CURRENT_COMM_DATA          = ' '
+*     BLK_EXCPT         =
+    IMPORTING
+      ADDRESS_VALUE     = LW_ADDRESS_VALUE
+*     ADDRESS_ADDITIONAL_INFO       =
+*     RETURNCODE        =
+*     ADDRESS_TEXT      =
+      SADR              = LW_SADR
+* TABLES
+*     ADDRESS_GROUPS    =
+*     ERROR_TABLE       =
+*     VERSIONS          =
+    EXCEPTIONS
+      PARAMETER_ERROR   = 1
+      ADDRESS_NOT_EXIST = 2
+      VERSION_NOT_EXIST = 3
+      INTERNAL_ERROR    = 4
+      ADDRESS_BLOCKED   = 5
+      OTHERS            = 6.
+
+  IF SY-SUBRC <> 0.
+    RETURN.
+  ENDIF.
+
+  P_NAME1 = LW_ADDRESS_VALUE-NAME1.
+*  P_NAME2 = LW_ADDRESS_VALUE-NAME2.
+*  P_NAME3 = LW_ADDRESS_VALUE-NAME3.
+*  P_STRAS = LW_ADDRESS_VALUE-STREET.
+*  P_TELF1 = LW_ADDRESS_VALUE-TEL_NUMBER.
+*  P_PSTLZ = LW_SADR-PSTLZ.
+*  P_TELFX = LW_SADR-TELFX.
+
+ENDFORM.                    " FRM_GET_VENDOR_ADDRESS
+*&---------------------------------------------------------------------*
+*&      Form  FRM_NAST_PROTOCAL_UPDATE
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+*      -->P_MSG_ARBGB  text
+*      -->P_MSG_NR  text
+*      -->P_MSG_TY  text
+*      -->P_MSG_V1  text
+*      -->P_MSG_V2  text
+*      -->P_MSG_V3  text
+*      -->P_MSG_V4  text
+*----------------------------------------------------------------------*
+FORM FRM_NAST_PROTOCAL_UPDATE  USING    P_MSG_ARBGB
+                                        P_MSG_NR
+                                        P_MSG_TY
+                                        P_MSG_V1
+                                        P_MSG_V2
+                                        P_MSG_V3
+                                        P_MSG_V4.
+
+  CALL FUNCTION 'NAST_PROTOCOL_UPDATE'
+    EXPORTING
+      MSG_ARBGB              = P_MSG_ARBGB
+      MSG_NR                 = P_MSG_NR
+      MSG_TY                 = P_MSG_TY
+      MSG_V1                 = P_MSG_V1
+      MSG_V2                 = P_MSG_V2
+      MSG_V3                 = P_MSG_V3
+      MSG_V4                 = P_MSG_V4
+    EXCEPTIONS
+      MESSAGE_TYPE_NOT_VALID = 1
+      NO_SY_MESSAGE          = 2
+      OTHERS                 = 3.
+
+ENDFORM.                    " FRM_NAST_PROTOCAL_UPDATE

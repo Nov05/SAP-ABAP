@@ -1,0 +1,155 @@
+CLASS zme_process_req_cust DEFINITION
+  PUBLIC
+  FINAL
+  CREATE PUBLIC .
+
+  PUBLIC SECTION.
+
+    INTERFACES if_ex_me_process_req_cust .
+
+  PROTECTED SECTION.
+
+  PRIVATE SECTION.
+
+ENDCLASS.
+
+CLASS zme_process_req_cust IMPLEMENTATION.
+
+* <SIGNATURE>---------------------------------------------------------------------------------------+
+* | Instance Public Method ZME_PROCESS_REQ_CUST->IF_EX_ME_PROCESS_REQ_CUST~CHECK
+* +-------------------------------------------------------------------------------------------------+
+* | [--->] IM_HEADER                      TYPE REF TO IF_PURCHASE_REQUISITION
+* | [--->] IM_HOLD                        TYPE        MMPUR_BOOL
+* | [--->] IM_PARK                        TYPE        MMPUR_BOOL(optional)
+* | [<-->] CH_FAILED                      TYPE        MMPUR_BOOL
+* +--------------------------------------------------------------------------------------</SIGNATURE>
+  METHOD if_ex_me_process_req_cust~check .
+  ENDMETHOD.
+
+* <SIGNATURE>---------------------------------------------------------------------------------------+
+* | Instance Public Method ZME_PROCESS_REQ_CUST->IF_EX_ME_PROCESS_REQ_CUST~CLOSE
+* +-------------------------------------------------------------------------------------------------+
+* | [--->] IM_HEADER                      TYPE REF TO IF_PURCHASE_REQUISITION
+* +--------------------------------------------------------------------------------------</SIGNATURE>
+  METHOD if_ex_me_process_req_cust~close .
+  ENDMETHOD.
+
+* <SIGNATURE>---------------------------------------------------------------------------------------+
+* | Instance Public Method ZME_PROCESS_REQ_CUST->IF_EX_ME_PROCESS_REQ_CUST~FIELDSELECTION_HEADER
+* +-------------------------------------------------------------------------------------------------+
+* | [--->] IM_HEADER                      TYPE REF TO IF_PURCHASE_REQUISITION
+* | [<-->] CH_FIELDSELECTION              TYPE        TTYP_FIELDSELECTION_MM
+* +--------------------------------------------------------------------------------------</SIGNATURE>
+  METHOD if_ex_me_process_req_cust~fieldselection_header .
+  ENDMETHOD.
+
+* <SIGNATURE>---------------------------------------------------------------------------------------+
+* | Instance Public Method ZME_PROCESS_REQ_CUST->IF_EX_ME_PROCESS_REQ_CUST~FIELDSELECTION_HEADER_REFKEYS
+* +-------------------------------------------------------------------------------------------------+
+* | [--->] IM_HEADER                      TYPE REF TO IF_PURCHASE_REQUISITION
+* | [<-->] CH_KEY0                        TYPE        BREFN
+* | [<-->] CH_KEY1                        TYPE        BREFN
+* | [<-->] CH_KEY2                        TYPE        BREFN
+* | [<-->] CH_KEY3                        TYPE        BREFN
+* | [<-->] CH_KEY4                        TYPE        BREFN
+* | [<-->] CH_KEY5                        TYPE        BREFN
+* | [<-->] CH_KEY6                        TYPE        BREFN
+* +--------------------------------------------------------------------------------------</SIGNATURE>
+  METHOD if_ex_me_process_req_cust~fieldselection_header_refkeys .
+  ENDMETHOD.
+
+* <SIGNATURE>---------------------------------------------------------------------------------------+
+* | Instance Public Method ZME_PROCESS_REQ_CUST->IF_EX_ME_PROCESS_REQ_CUST~FIELDSELECTION_ITEM
+* +-------------------------------------------------------------------------------------------------+
+* | [--->] IM_HEADER                      TYPE REF TO IF_PURCHASE_REQUISITION
+* | [--->] IM_ITEM                        TYPE REF TO IF_PURCHASE_REQUISITION_ITEM
+* | [<-->] CH_FIELDSELECTION              TYPE        TTYP_FIELDSELECTION_MM
+* +--------------------------------------------------------------------------------------</SIGNATURE>
+  METHOD if_ex_me_process_req_cust~fieldselection_item .
+  ENDMETHOD.
+
+* <SIGNATURE>---------------------------------------------------------------------------------------+
+* | Instance Public Method ZME_PROCESS_REQ_CUST->IF_EX_ME_PROCESS_REQ_CUST~FIELDSELECTION_ITEM_REFKEYS
+* +-------------------------------------------------------------------------------------------------+
+* | [--->] IM_ITEM                        TYPE REF TO IF_PURCHASE_REQUISITION_ITEM
+* | [<-->] CH_KEY0                        TYPE        BREFN
+* | [<-->] CH_KEY1                        TYPE        BREFN
+* | [<-->] CH_KEY2                        TYPE        BREFN
+* | [<-->] CH_KEY3                        TYPE        BREFN
+* | [<-->] CH_KEY4                        TYPE        BREFN
+* | [<-->] CH_KEY5                        TYPE        BREFN
+* | [<-->] CH_KEY6                        TYPE        BREFN
+* +--------------------------------------------------------------------------------------</SIGNATURE>
+  METHOD if_ex_me_process_req_cust~fieldselection_item_refkeys .
+  ENDMETHOD.
+
+* <SIGNATURE>---------------------------------------------------------------------------------------+
+* | Instance Public Method ZME_PROCESS_REQ_CUST->IF_EX_ME_PROCESS_REQ_CUST~INITIALIZE
+* +-------------------------------------------------------------------------------------------------+
+* +--------------------------------------------------------------------------------------</SIGNATURE>
+  METHOD if_ex_me_process_req_cust~initialize .
+  ENDMETHOD.
+
+* <SIGNATURE>---------------------------------------------------------------------------------------+
+* | Instance Public Method ZME_PROCESS_REQ_CUST->IF_EX_ME_PROCESS_REQ_CUST~OPEN
+* +-------------------------------------------------------------------------------------------------+
+* | [--->] IM_TRTYP                       TYPE        TRTYP
+* | [--->] IM_HEADER                      TYPE REF TO IF_PURCHASE_REQUISITION
+* | [<-->] CH_VALID                       TYPE        MMPUR_BOOL
+* | [<-->] CH_DISPLAY_ONLY                TYPE        MMPUR_BOOL
+* +--------------------------------------------------------------------------------------</SIGNATURE>
+  METHOD if_ex_me_process_req_cust~open .
+    INCLUDE mm_messages_mac.
+    DATA l_null TYPE REF TO if_message_obj_mm.
+
+* IF ...
+
+*- handling for error messages -> see oss note 938007
+    mmpur_business_obj l_null.
+    mmpur_message_forced sy-msgty sy-msgid sy-msgno sy-msgv1 sy-msgv2
+                         sy-msgv3 sy-msgv4.
+
+    ch_valid = mmpur_no.
+* ENDIF ...
+  ENDMETHOD.
+
+* <SIGNATURE>---------------------------------------------------------------------------------------+
+* | Instance Public Method ZME_PROCESS_REQ_CUST->IF_EX_ME_PROCESS_REQ_CUST~POST
+* +-------------------------------------------------------------------------------------------------+
+* | [--->] IM_BANFN                       TYPE        BANFN
+* | [--->] IM_HEADER                      TYPE REF TO IF_PURCHASE_REQUISITION
+* +--------------------------------------------------------------------------------------</SIGNATURE>
+  METHOD if_ex_me_process_req_cust~post .
+  ENDMETHOD.
+
+* <SIGNATURE>---------------------------------------------------------------------------------------+
+* | Instance Public Method ZME_PROCESS_REQ_CUST->IF_EX_ME_PROCESS_REQ_CUST~PROCESS_ACCOUNT
+* +-------------------------------------------------------------------------------------------------+
+* | [--->] IM_ACCOUNT                     TYPE REF TO IF_ACCOUNTING_MODEL_MM
+* | [--->] IM_COUNT                       TYPE        I(optional)
+* | [--->] IM_ACCOUNT_REF                 TYPE REF TO IF_PURCHASE_REQ_ACCOUNT_MM
+* +--------------------------------------------------------------------------------------</SIGNATURE>
+  METHOD if_ex_me_process_req_cust~process_account .
+  ENDMETHOD.
+
+* <SIGNATURE>---------------------------------------------------------------------------------------+
+* | Instance Public Method ZME_PROCESS_REQ_CUST->IF_EX_ME_PROCESS_REQ_CUST~PROCESS_HEADER
+* +-------------------------------------------------------------------------------------------------+
+* | [--->] IM_HEADER                      TYPE REF TO IF_PURCHASE_REQUISITION
+* | [--->] IM_COUNT                       TYPE        I(optional)
+* +--------------------------------------------------------------------------------------</SIGNATURE>
+  METHOD if_ex_me_process_req_cust~process_header .
+* nothing to do
+  ENDMETHOD.
+
+* <SIGNATURE>---------------------------------------------------------------------------------------+
+* | Instance Public Method ZME_PROCESS_REQ_CUST->IF_EX_ME_PROCESS_REQ_CUST~PROCESS_ITEM
+* +-------------------------------------------------------------------------------------------------+
+* | [--->] IM_ITEM                        TYPE REF TO IF_PURCHASE_REQUISITION_ITEM
+* | [--->] IM_COUNT                       TYPE        I(optional)
+* | [--->] IM_REF_ITEM                    TYPE REF TO IF_PURCHASE_REQUISITION_ITEM(optional)
+* +--------------------------------------------------------------------------------------</SIGNATURE>
+  METHOD if_ex_me_process_req_cust~process_item .
+  ENDMETHOD.
+
+ENDCLASS.

@@ -1,0 +1,4 @@
+Text-symbols
+002	Reason for ordering, customer
+003	Requester, customer
+004	Valid reason for ordering, customer

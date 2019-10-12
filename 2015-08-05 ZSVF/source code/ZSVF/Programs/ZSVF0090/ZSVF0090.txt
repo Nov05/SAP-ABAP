@@ -1,0 +1,55 @@
+***********************************************************************
+* Project Name : D**kin DCC Upgrading - SVF
+* Program Name : ZSVF0090
+* Description  : SVF GR for PurO Print
+* Date/Autohr  : 2014-09-28 / Nov05
+***********************************************************************
+* M O D I F I C A T I O N  L O G
+***********************************************************************
+* ChangeDate  Programmer  Request     Description
+* ==========  ==========  ==========  =================================
+*
+***********************************************************************
+*======================================================================*
+*  Includes
+*======================================================================*
+*** Global Data Declear
+*INCLUDE ZSVF0090_c01.  "Class Definition
+INCLUDE FM06PTOP.
+INCLUDE ZSVF_TOP01.     "Global Variable (Do not modify)
+INCLUDE ZSVF_TOP02.     "Macros (Do not modify)
+INCLUDE ZSVF0090_TOP.   "Global Variable
+*INCLUDE ZSVF0090_o01.  "PBO
+*INCLUDE ZSVF0090_i01.  "PAI
+INCLUDE ZSVF0090_F01.   "Subroutines
+
+*&---------------------------------------------------------------------*
+*       Beginning of the logic
+*----------------------------------------------------------------------*
+FORM ENTRY_NEU USING ENT_RETCO ENT_SCREEN.
+
+* Data definition
+  INCLUDE ZSVF0090_I01.
+* Get data
+  INCLUDE ZSVF0090_I02.
+
+  LOOP AT GW_DOC-XEKPO INTO GW_XEKPO.
+* Process data
+    INCLUDE ZSVF0090_I03.
+* Output data to SVF
+    INCLUDE ZSVF0090_I04.
+  ENDLOOP. "loop at gw_doc-xekpo
+
+* Message SVF404: #### & ########
+  GV_MSG_V1 = GW_DOC-XEKKO-EBELN.
+  SHIFT GV_MSG_V1 LEFT DELETING LEADING '0'.
+  MESSAGE S404 WITH GV_MSG_V1.
+  PERFORM FRM_NAST_PROTOCAL_UPDATE USING 'ZSVF' "MSG_ARBGB
+                                         '404'  "MSG_NR
+                                         'S'    "MSG_TY
+                                         GV_MSG_V1    "MSG_V1
+                                         GV_PRINT_EXCEPTION   "MSG_V2
+                                         ' '    "MSG_V3
+                                         ' '.   "MSG_V4
+
+ENDFORM.                    " ENTRY_NEU

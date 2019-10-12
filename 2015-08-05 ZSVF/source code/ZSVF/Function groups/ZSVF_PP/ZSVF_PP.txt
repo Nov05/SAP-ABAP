@@ -1,0 +1,15 @@
+*******************************************************************
+*   System-defined Include-files.                                 *
+*******************************************************************
+  INCLUDE LZSVF_PPTOP.                       " Global Data
+  INCLUDE LZSVF_PPUXX.                       " Function Modules
+
+*******************************************************************
+*   User-defined Include-files (if necessary).                    *
+*******************************************************************
+* INCLUDE LZSVF_PPF...                       " Subroutines
+* INCLUDE LZSVF_PPO...                       " PBO-Modules
+* INCLUDE LZSVF_PPI...                       " PAI-Modules
+* INCLUDE LZSVF_PPE...                       " Events
+* INCLUDE LZSVF_PPP...                       " Local class implement.
+* INCLUDE LZSVF_PPT99.                       " ABAP Unit tests

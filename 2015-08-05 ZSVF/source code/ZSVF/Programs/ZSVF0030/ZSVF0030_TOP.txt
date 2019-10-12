@@ -1,0 +1,72 @@
+*&---------------------------------------------------------------------*
+*&  Include           ZSVF0030_TOP
+*&---------------------------------------------------------------------*
+* production order - for getting data from [COR1/COR2] memeory
+TABLES: COBL.
+*
+* Tabelle der Aufträge
+DATA: CAUFVD_TAB LIKE CAUFVD OCCURS 0 WITH HEADER LINE.
+** Tabelle der Positionen
+*DATA: AFPOD_TAB LIKE AFPOD OCCURS 0 WITH HEADER LINE.
+** Tabelle der Vorgänge
+*DATA: AFVGD_TAB LIKE AFVGD OCCURS 0 WITH HEADER LINE.
+** Tabelle der Folgen
+*DATA: AFFLD_TAB LIKE AFFLD OCCURS 0 WITH HEADER LINE.
+** Tabelle der Komponenten
+*DATA: RESBD_TAB LIKE RESBD OCCURS 0 WITH HEADER LINE.
+** Tabelle der FHM's
+*DATA: AFFHD_TAB LIKE AFFHD OCCURS 0 WITH HEADER LINE.
+** Tabelle der Arbeitsplätze
+*DATA: WORK_TAB TYPE CO_RCR01_TAB WITH HEADER LINE.
+** Tabelle der Komponenten
+*DATA: COMP_TAB LIKE RESBD OCCURS 0 WITH HEADER LINE.
+** Tabelle der FHM's
+*DATA: FHM_TAB LIKE AFFHD OCCURS 0 WITH HEADER LINE.
+*DATA: CHARAC_TAB TYPE CO_SFC_CONF_TAB WITH HEADER LINE.
+*DATA: TTL_TAB TYPE CO_SFCTTL_ACT_TAB WITH HEADER LINE.
+** Table of document links
+*DATA: AFDLD_TAB TYPE CO_AFDLD_TAB WITH HEADER LINE.
+** Tabelle der Materialstämme
+*DATA: MV_TAB TYPE CO_SFCMATDR_TAB WITH HEADER LINE.
+** Tabelle der Vorgangssplits
+*DATA: KBEDP_TAB TYPE CO_KBEDP_TAB WITH HEADER LINE.
+** Tabelle der Stüli-Unterpositionen
+*DATA: STPUB LIKE STPUB OCCURS 0 WITH HEADER LINE.
+** Tabelle der Auftragsnetzinfos
+*DATA: COLORD_TAB TYPE CO_PPPRCOLORD_TAB WITH HEADER LINE.
+** Tabelle der Serialnummern
+*DATA: SEROB_TAB TYPE  CO_RSEROB_TAB WITH HEADER LINE.
+
+* inspection lot
+DATA: GW_QAPOTAB LIKE LINE OF G_QAPOTAB, "operation data
+      GW_QAMVTAB LIKE LINE OF G_QAMVTAB. "* features
+
+* document info
+DATA: GW_PRINT_KEY TYPE ZSVF001_KEY,
+      GT_PRINT_KEY TYPE TABLE OF ZSVF001_KEY,
+      GW_ZSVF006   TYPE ZSVF006, "SVF Inspection Lot Header
+      GT_ZSVF006   TYPE TABLE OF ZSVF006,
+      GW_ZSVF007   TYPE ZSVF007, "SVF Inspection Lot Item
+      GT_ZSVF007   TYPE TABLE OF ZSVF007,
+      GW_ZSVF015   TYPE ZSVF015,
+      GT_ZSVF015   TYPE TABLE OF ZSVF015.
+
+* for getting printer info
+DATA: GV_PDDEPT        TYPE ZSVF_PDDEPT,
+      GV_PDLINE        TYPE ZSVF_PDLINE,
+      GW_ZSVF005       TYPE ZSVF005,
+      GT_ZSVF005       TYPE TABLE OF ZSVF005,
+      GW_ZSVF005_KOM   TYPE ZSVF005_KOM,
+      GT_ZSVF005_KOM   TYPE TABLE OF ZSVF005_KOM,
+      GV_DOC_TYPE_DESC TYPE ZSVF_DOC_TYPE_DESC,
+      GV_DEPT_NAME     TYPE ZSVF014-ZSVF_DEPT_NAME. "Department ID
+
+DATA: GV_STRING              TYPE STRING,
+      GV_MESSAGE             TYPE STRING,
+      GV_BUKRS               TYPE BUKRS,
+      GV_BUTXT               TYPE ZSVF_BUTXT,
+      GV_ZSVF_CCPIC          TYPE ZSVF_CCPIC,
+      GV_STREET              TYPE ZSVF_CCADS, "changed on 2015-02-13
+      GV_LOCKED              TYPE C,
+      GW_AFKO                TYPE AFKO,
+      GV_PRINT_EXCEPTION(50) TYPE C.

@@ -1,0 +1,63 @@
+*&---------------------------------------------------------------------*
+*&  Include           ZSVF0070_I01
+*&---------------------------------------------------------------------*
+  DATA: LT_ZSVF008       TYPE TABLE OF ZSVF008,
+        LW_ZSVF008       TYPE ZSVF008,
+        LT_ZSVF009       TYPE TABLE OF ZSVF009,
+        LW_ZSVF009       TYPE ZSVF009,
+        LT_PRINT_KEY     TYPE TABLE OF ZSVF001_KEY,
+        LW_PRINT_KEY     TYPE ZSVF001_KEY,
+        LT_ZSVF005_KOM   TYPE TABLE OF ZSVF005_KOM,
+        LW_ZSVF005_KOM   TYPE ZSVF005_KOM,
+        LT_ZSVF005       TYPE TABLE OF ZSVF005,
+        LW_ZSVF005       TYPE ZSVF005,
+        LV_DOC_TYPE_DESC TYPE ZSVF_DOC_TYPE_DESC.
+
+  FIELD-SYMBOLS: <LW_ZSVF008> TYPE ZSVF008.
+
+  DATA: LV_BUKRS      TYPE BUKRS,
+        LV_BUTXT      TYPE ZSVF_BUTXT,
+        LV_ZSVF_CCPIC TYPE ZSVF_CCPIC,
+        LV_STREET     TYPE ZSVF_CCADS, "BAPI0002_3-STREET, chagned on 2015-02-13
+        LV_ADRNR      TYPE T001-ADRNR.
+
+  DATA: LV_SUBRC  TYPE SY-SUBRC,
+        LV_LOCKED TYPE C.
+
+* For getting PO history data
+  DATA: LW_EKPO TYPE EKPO,
+        LW_EKET TYPE EKET,
+* For getting vendor data
+        LW_LFA1 TYPE LFA1.
+
+  DATA: LT_HEADER         TYPE TABLE OF ZSVF_CSV_HEADER_PURO,
+        LW_HEADER         TYPE ZSVF_CSV_HEADER_PURO,
+        LT_ITEM           TYPE TABLE OF ZSVF_CSV_ITEM_PURO,
+        LW_ITEM           TYPE ZSVF_CSV_ITEM_PURO,
+        LV_CSV_FNAME      TYPE ZSVF_CSV_FNAME,
+        LV_TAX_RATE       TYPE ZSVF_TAX_RATE,
+        LV_TAX_PERCENTAGE TYPE CHAR15,
+        LV_ID_NAME_ZH     TYPE ZSVF_BUYER. "User ID and Full Name
+
+  DATA: LT_POADDRDELIVERY TYPE TABLE OF BAPIMEPOADDRDELIVERY,
+        LW_POADDRDELIVERY TYPE BAPIMEPOADDRDELIVERY.
+
+* For choosing language of PO for SVF ouptut.
+  DATA: LV_PO_LANG  TYPE SPRAS, "Vendor language = PO language
+        LV_SVF_LANG TYPE SPRAS. "SVF Form Language
+
+* For getting PO changes
+  DATA: LT_PO_CHANGES_KOM TYPE TABLE OF ZSVF_PO_CHANGES_KOM, "Communication Table
+        LW_PO_CHANGES_KOM TYPE ZSVF_PO_CHANGES_KOM,
+        LT_PO_CHANGES_TXT TYPE TABLE OF ZSVF_PO_CHANGES_TXT,
+        LW_PO_CHANGES_TXT TYPE ZSVF_PO_CHANGES_TXT.
+
+* Delete on 2015-05-11, decided by tax rate=0, no hard-coding.
+** Rate 0 Tax Codes
+*  DATA: LR_MWSKZ TYPE RANGE OF MWSKZ WITH HEADER LINE.
+*  LR_MWSKZ-SIGN = 'I'.
+*  LR_MWSKZ-OPTION = 'EQ'.
+*  LR_MWSKZ-LOW = 'J6'. APPEND LR_MWSKZ.
+*  LR_MWSKZ-LOW = 'L0'. APPEND LR_MWSKZ.
+*  LR_MWSKZ-LOW = 'X0'. APPEND LR_MWSKZ.
+*  LR_MWSKZ-LOW = 'S0'. APPEND LR_MWSKZ.

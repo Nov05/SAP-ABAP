@@ -1,0 +1,370 @@
+FUNCTION Z_SVF_FILE_SEND_TO_SVF .
+*"----------------------------------------------------------------------
+*"*"Local Interface:
+*"  IMPORTING
+*"     VALUE(I_PRINT_KEY) TYPE  ZSVF001_KEY
+*"     VALUE(I_JOBID) TYPE  ZSVF_JOBID OPTIONAL
+*"     VALUE(I_CSV_FNAME) TYPE  ZSVF_CSV_FNAME OPTIONAL
+*"  EXCEPTIONS
+*"      PRINT_KEY_INVALID
+*"      EXECUTE_COMMAND_FAILURE
+*"      FILEPATH_GET_ERROR
+*"      PROGRAM_INTERNAL_ERROR
+*"      PRINTER_NAME_ERROR
+*"----------------------------------------------------------------------
+* Change Log:
+* 1. 2014-09-19 Created by Arwen Liu.
+* 2. 2015-02-13 Add logic to get external command parameters from table
+*               ZSVF020
+*----------------------------------------------------------------------*
+  DATA: LV_STATUS                TYPE EXTCMDEXEX-STATUS,
+        LV_EXITCODE              TYPE EXTCMDEXEX-EXITCODE,
+        LT_EXEC_PROTOCAL         TYPE TABLE OF BTCXPM,
+        LW_EXEC_PROTOCAL         TYPE BTCXPM,
+        LV_MESSAGE               TYPE STRING,
+        LV_FILENAME              TYPE PATHEXTERN,
+        LV_FILEPATH_CSV          TYPE PATHEXTERN,
+        LV_ADDITIONAL_PARAMETERS TYPE SXPGCOLIST-PARAMETERS,
+        LW_ZSVF001               TYPE ZSVF001,
+        LW_ZSVF015               TYPE ZSVF015,
+        LT_ZSVF020               TYPE TABLE OF ZSVF020, "External Command Parameters
+        LW_ZSVF020               TYPE ZSVF020,
+        LV_COMMANDNAME           TYPE SXPGCOLIST-NAME, "External Command Name
+        LV_FILEPATH_JAR          TYPE PATHEXTERN. "SVF .jar file path
+
+* Flags
+  DATA: LV_SVF_ERROR   TYPE C, "Call command to send file to SVF
+        LV_CSV_DELETED TYPE C. "X = CSV deleted after sending
+*----------------------------------------------------------------------*
+* Check Input Parameters
+*----------------------------------------------------------------------*
+  IF I_PRINT_KEY-ZSVF_DOC_TYPE IS INITIAL
+*  OR I_PRINT_KEY-ZSVF_DOC_NUM IS INITIAL
+*  OR I_PRINT_KEY-ZSVF_DOC_ITEM IS INITIAL
+  OR I_PRINT_KEY-ZSVF_DOC_ID IS INITIAL
+  OR I_PRINT_KEY-ZSVF_PRT_NO IS INITIAL.
+    RAISE PRINT_KEY_INVALID.
+  ENDIF.
+
+* Get status
+  SELECT SINGLE * FROM ZSVF001 INTO LW_ZSVF001
+    WHERE ZSVF_DOC_TYPE = I_PRINT_KEY-ZSVF_DOC_TYPE
+    AND ZSVF_DOC_NUM = I_PRINT_KEY-ZSVF_DOC_NUM
+    AND ZSVF_DOC_ITEM = I_PRINT_KEY-ZSVF_DOC_ITEM
+    AND ZSVF_DOC_ID = I_PRINT_KEY-ZSVF_DOC_ID
+    AND ZSVF_PRT_NO = I_PRINT_KEY-ZSVF_PRT_NO.
+  IF SY-SUBRC <> 0.
+    RAISE PRINT_KEY_INVALID.
+  ENDIF.
+
+* Get print request information
+  SELECT SINGLE * FROM ZSVF015 INTO LW_ZSVF015
+      WHERE ZSVF_DOC_TYPE = I_PRINT_KEY-ZSVF_DOC_TYPE
+      AND ZSVF_DOC_NUM = I_PRINT_KEY-ZSVF_DOC_NUM
+      AND ZSVF_DOC_ITEM = I_PRINT_KEY-ZSVF_DOC_ITEM
+      AND ZSVF_DOC_ID = I_PRINT_KEY-ZSVF_DOC_ID
+      AND ZSVF_PRT_NO = I_PRINT_KEY-ZSVF_PRT_NO.
+  IF SY-SUBRC <> 0.
+    RAISE PRINT_KEY_INVALID.
+  ENDIF.
+*----------------------------------------------------------------------*
+* Get external command parameters from configuration table
+*----------------------------------------------------------------------*
+  CLEAR LT_ZSVF020[].
+  SELECT * FROM ZSVF020 INTO TABLE LT_ZSVF020.
+  IF SY-SUBRC <> 0.
+* Error Log
+    MESSAGE S026(ZSVF) DISPLAY LIKE 'E'.
+    "## CSV ########## ZSVF020 ###
+    MACRO_SVF_LOG_WRITE I_PRINT_KEY "Print request Key
+                        'E'       "Message Type
+                        '026'     "Message Number
+                        '' "Message Variant 1
+                        '' "Message Variant 2
+                        '' "Message Variant 3
+                        ''. "Message Variant 4
+    RETURN.
+  ENDIF.
+  SORT LT_ZSVF020 BY LFDNR.
+
+*----------------------------------------------------------------------*
+* Get External Command Name
+*----------------------------------------------------------------------*
+  CLEAR LV_COMMANDNAME.
+  READ TABLE LT_ZSVF020 INTO LW_ZSVF020
+    WITH KEY ZSVF_CMD_TYPE = 'CMD'.
+  IF SY-SUBRC <> 0 OR LW_ZSVF020-BTCXPGPAR IS INITIAL.
+* Error Log
+    MESSAGE S028(ZSVF) DISPLAY LIKE 'E'.
+    "## CSV ########## ZSVF020-ZSVF_CMD_TYPE = CMD ###
+    MACRO_SVF_LOG_WRITE I_PRINT_KEY "Print request Key
+                        'E'       "Message Type
+                        '028'     "Message Number
+                        '' "Message Variant 1
+                        '' "Message Variant 2
+                        '' "Message Variant 3
+                        ''. "Message Variant 4
+    RETURN.
+  ELSE.
+    LV_COMMANDNAME = LW_ZSVF020-BTCXPGPAR.
+  ENDIF.
+*----------------------------------------------------------------------*
+* Generate full file name
+*----------------------------------------------------------------------*
+* Get file name
+  CLEAR LV_FILENAME.
+  LV_FILENAME = LW_ZSVF015-ZSVF_CSV_FNAME.
+
+* Get physical file path
+  CALL FUNCTION 'Z_SVF_FILEPATH_GET'
+    EXPORTING
+      I_DOC_TYPE         = LW_ZSVF001-ZSVF_DOC_TYPE
+      I_FILE_NAME        = LV_FILENAME
+    IMPORTING
+      O_FILEPATH         = LV_FILEPATH_CSV
+    EXCEPTIONS
+      GET_FILEPATH_ERROR = 1
+      OTHERS             = 2.
+
+  IF SY-SUBRC <> 0.
+    RAISE FILEPATH_GET_ERROR.
+  ENDIF.
+
+*----------------------------------------------------------------------*
+* Get SVF .jar file physical path
+*----------------------------------------------------------------------*
+  CLEAR LV_FILENAME.
+  READ TABLE LT_ZSVF020 INTO LW_ZSVF020
+    WITH KEY ZSVF_CMD_TYPE = 'JAR'.
+  IF SY-SUBRC <> 0 OR LW_ZSVF020-BTCXPGPAR IS INITIAL.
+* Error Log
+    MESSAGE S027(ZSVF) DISPLAY LIKE 'E'.
+    "## CSV ########## ZSVF020-ZSVF_CMD_TYPE = JAR ###
+    MACRO_SVF_LOG_WRITE I_PRINT_KEY "Print request Key
+                        'E'       "Message Type
+                        '027'     "Message Number
+                        '' "Message Variant 1
+                        '' "Message Variant 2
+                        '' "Message Variant 3
+                        ''. "Message Variant 4
+    RETURN.
+  ELSE.
+    LV_FILENAME = LW_ZSVF020-BTCXPGPAR.
+    CALL FUNCTION 'Z_SVF_FILEPATH_GET'
+      EXPORTING
+        I_DOC_TYPE         = GC_DOC_TYPE_JAR
+        I_FILE_NAME        = LV_FILENAME
+      IMPORTING
+        O_FILEPATH         = LV_FILEPATH_JAR
+      EXCEPTIONS
+        GET_FILEPATH_ERROR = 1
+        OTHERS             = 2.
+    IF SY-SUBRC <> 0.
+      RAISE FILEPATH_GET_ERROR.
+    ENDIF.
+  ENDIF.
+
+*----------------------------------------------------------------------*
+* Call External Command from SAP
+*----------------------------------------------------------------------*
+* e.g.:
+* 1.   Z_SVF_1  Windows NT: java -classpath
+*  1.1 e.g. D:\SVF\CallJARTest.jar JobTest.CallJarTest printTest D:\SVF\csv\printTest.csv
+* 2.   Z_SVF_2  Windows NT: java -jar
+*  2.1 e.g. D:\SVF\CallJARTest.jar printTestSato D:\SVF\csv\satotest.csv
+*  2.2 or java -jar jar jobid csv
+
+* Changed by Arwen, 2015-02-13
+* ###############
+*  CONCATENATE LV_FILEPATH_JAR         ".jar file path
+*              LV_JOBID                "Job ID
+*              LV_FILEPATH_CSV         "full path of the .csv file
+*              INTO LV_ADDITIONAL_PARAMETERS SEPARATED BY SPACE.
+
+  CLEAR LV_ADDITIONAL_PARAMETERS.
+  LOOP AT LT_ZSVF020 INTO LW_ZSVF020.
+    CASE LW_ZSVF020-ZSVF_CMD_TYPE.
+      WHEN 'CMD'.
+        CONTINUE.
+      WHEN 'JOB'.
+        CONCATENATE LV_ADDITIONAL_PARAMETERS
+                    I_JOBID INTO LV_ADDITIONAL_PARAMETERS
+                    SEPARATED BY SPACE.
+      WHEN 'JAR'.
+        CONCATENATE LV_ADDITIONAL_PARAMETERS
+                    LV_FILEPATH_JAR INTO LV_ADDITIONAL_PARAMETERS
+                    SEPARATED BY SPACE.
+      WHEN 'CSV'.
+        CONCATENATE LV_ADDITIONAL_PARAMETERS
+                    LV_FILEPATH_CSV INTO LV_ADDITIONAL_PARAMETERS
+                    SEPARATED BY SPACE.
+      WHEN OTHERS.
+        CONCATENATE LV_ADDITIONAL_PARAMETERS
+                    LW_ZSVF020-BTCXPGPAR INTO LV_ADDITIONAL_PARAMETERS
+                    SEPARATED BY SPACE.
+    ENDCASE.
+  ENDLOOP. "loop at lt_zsvf020
+  CONDENSE LV_ADDITIONAL_PARAMETERS.
+
+  CALL FUNCTION 'SXPG_COMMAND_EXECUTE'
+    EXPORTING
+      COMMANDNAME                   = LV_COMMANDNAME
+      ADDITIONAL_PARAMETERS         = LV_ADDITIONAL_PARAMETERS
+*     OPERATINGSYSTEM               = SY-OPSYS
+*     TARGETSYSTEM                  = SY-HOST
+*     DESTINATION                   =
+*     STDOUT                        = 'X'
+*     STDERR                        = 'X'
+*     TERMINATIONWAIT               = 'X'
+*     TRACE                         =
+*     DIALOG                        =
+    IMPORTING
+      STATUS                        = LV_STATUS
+      EXITCODE                      = LV_EXITCODE
+    TABLES
+      EXEC_PROTOCOL                 = LT_EXEC_PROTOCAL
+    EXCEPTIONS
+      NO_PERMISSION                 = 1
+      COMMAND_NOT_FOUND             = 2
+      PARAMETERS_TOO_LONG           = 3
+      SECURITY_RISK                 = 4
+      WRONG_CHECK_CALL_INTERFACE    = 5
+      PROGRAM_START_ERROR           = 6
+      PROGRAM_TERMINATION_ERROR     = 7
+      X_ERROR                       = 8
+      PARAMETER_EXPECTED            = 9
+      TOO_MANY_PARAMETERS           = 10
+      ILLEGAL_COMMAND               = 11
+      WRONG_ASYNCHRONOUS_PARAMETERS = 12
+      CANT_ENQ_TBTCO_ENTRY          = 13
+      JOBCOUNT_GENERATION_ERROR     = 14
+      OTHERS                        = 15.
+
+  CLEAR LV_SVF_ERROR.
+  IF SY-SUBRC = 0 AND LV_STATUS = 'O' AND LV_EXITCODE = 0.
+    PERFORM FRM_PROCESS_EXEC_PROTOCAL TABLES LT_EXEC_PROTOCAL
+                                      CHANGING LV_SVF_ERROR.
+  ELSE.
+    LV_SVF_ERROR = 'X'.
+* Log
+    IF SY-SUBRC <> 0.
+      CASE SY-SUBRC.
+        WHEN 1.
+          LV_MESSAGE = 'No permission'.
+        WHEN 2.
+          LV_MESSAGE = 'Command not found'.
+        WHEN 3.
+          LV_MESSAGE = 'Parameters too long'.
+        WHEN 4.
+          LV_MESSAGE = 'Security risk'.
+        WHEN 5.
+          LV_MESSAGE = 'Wrong check call interface'.
+        WHEN 6.
+          LV_MESSAGE = 'Program start error'.
+        WHEN 7.
+          LV_MESSAGE = 'Program termination error'.
+        WHEN 8.
+          LV_MESSAGE = 'X error'.
+        WHEN 9.
+          LV_MESSAGE = 'Parameter expected'.
+        WHEN 10.
+          LV_MESSAGE = 'Too many parameters'.
+        WHEN 11.
+          LV_MESSAGE = 'Illegal command'.
+        WHEN 15.
+          LV_MESSAGE = 'Jobcount generation error'.
+      ENDCASE.
+      "ZSVF011 ## CSV ###& & & &
+      MACRO_SVF_LOG_WRITE I_PRINT_KEY "Print request Key
+                          'E'       "Message Type
+                          '011'     "Message Number
+                          LV_MESSAGE "Message Variant 1
+                          ''  "Message Variant 2
+                          '' "Message Variant 3
+                          ''. "Message Variant 4
+    ENDIF. "if sy-subrc <> 0
+  ENDIF.
+
+*----------------------------------------------------------------------*
+* Delete CSV files after sending no matter success or failure
+*----------------------------------------------------------------------*
+* Set CSV Deletion Mode in include ZSVF_TOP01
+  IF GV_CSV_DEL_MODE = GC_CSV_DEL_MODE_ON.
+    DO 2 TIMES.
+      DELETE DATASET LV_FILEPATH_CSV.
+      IF SY-SUBRC <> 0.
+        WAIT UP TO 1 SECONDS.
+      ELSE.
+        LV_CSV_DELETED = 'X'.
+        EXIT. "exit do
+      ENDIF.
+    ENDDO.
+
+    IF LV_CSV_DELETED <> 'X'.
+* Error Log
+      MESSAGE S031(ZSVF) DISPLAY LIKE 'E'.
+      "## CSV ######### &
+      MACRO_SVF_LOG_WRITE I_PRINT_KEY "Print request Key
+                          'E'       "Message Type
+                          '031'     "Message Number
+                          LV_FILEPATH_CSV "Message Variant 1
+                          '' "Message Variant 2
+                          '' "Message Variant 3
+                          ''. "Message Variant 4
+    ENDIF.
+  ENDIF. "IF GV_CSV_DEL_MODE = GC_CSV_DEL_MODE_ON.
+
+*----------------------------------------------------------------------*
+* Sending error handling
+*----------------------------------------------------------------------*
+  IF LV_SVF_ERROR <> ''.
+* Message
+    MESSAGE S001(ZSVF) DISPLAY LIKE 'E'. "External command execution error
+* Error Log
+    "Message Class ZSVF: "External command execution error
+    MACRO_SVF_LOG_WRITE I_PRINT_KEY "Print request Key
+                        'E'    "Message Type
+                        '001'  "Message Number
+                        '' "Message Variant 1
+                        '' "Message Variant 2
+                        '' "Message Variant 3
+                        ''. "Message Variant 4
+    "## CSV ####### &##### &
+    MACRO_SVF_LOG_WRITE I_PRINT_KEY "Print request Key
+                        'E'       "Message Type
+                        '035'     "Message Number
+                        LV_COMMANDNAME "Message Variant 1
+                        LV_ADDITIONAL_PARAMETERS "Message Variant 2
+                        '' "Message Variant 3
+                        ''. "Message Variant 4
+    "SVF returned messages
+    LOOP AT LT_EXEC_PROTOCAL INTO LW_EXEC_PROTOCAL.
+      CONCATENATE LW_EXEC_PROTOCAL-LENGTH
+                  LW_EXEC_PROTOCAL-MESSAGE
+                  INTO LV_MESSAGE SEPARATED BY SPACE.
+      MACRO_SVF_LOG_WRITE_3 I_PRINT_KEY "Print request Key
+                            'E'    "Message Type
+                            LV_MESSAGE. "Message
+    ENDLOOP. "loop at lt_exec_protocal
+  ENDIF. "IF LV_SVF_ERROR <> ''.
+
+  IF LV_SVF_ERROR = '1'.
+    "Message Class ZSVF: ## CSV ####### & ##
+    MACRO_SVF_LOG_WRITE I_PRINT_KEY "Print request Key
+                        'E'    "Message Type
+                        '038'  "Message Number
+                        LW_ZSVF015-ZSVF_PRTNAME "Message Variant 1
+                        '' "Message Variant 2
+                        '' "Message Variant 3
+                        ''. "Message Variant 4
+  ENDIF.
+
+* Raise Exception
+  CASE LV_SVF_ERROR.
+    WHEN 'X'.
+      RAISE EXECUTE_COMMAND_FAILURE.
+    WHEN '1'.
+      RAISE PRINTER_NAME_ERROR.
+  ENDCASE.
+
+ENDFUNCTION.

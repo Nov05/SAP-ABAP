@@ -1,0 +1,4 @@
+Field	Key	Data-element	Data-type	Length	Decimals	Domain	Check-table	Include-table
+EBELN		EBELN	CHAR	000010	000000	EBELN	*	
+EBELP		EBELP	NUMC	000005	000000	EBELP	*	
+ZSVF_CHGTXT		ZSVF_CHGTXT	CHAR	000300	000000	ZSVF_CHGTXT		

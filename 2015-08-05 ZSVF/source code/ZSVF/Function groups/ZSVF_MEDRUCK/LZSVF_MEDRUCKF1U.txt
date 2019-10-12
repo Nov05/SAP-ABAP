@@ -1,0 +1,24 @@
+*&---------------------------------------------------------------------*
+*&  Include           LMEDRUCKF1U                                      *
+*&---------------------------------------------------------------------*
+*& Note 855263
+*& Set the preview indicator to 'X' in order to avoide the returen code
+*& set to 9 in form ENDE.
+
+FORM DISPLAY_PURCHASE_DOCUMENT USING l_ekko_ebeln l_ekko_bstyp
+im_preview.
+
+  IF im_preview eq 'X'.
+     ENJPREVIEW = 'X'.
+  ENDIF.
+
+  CALL FUNCTION 'ME_DISPLAY_PURCHASE_DOCUMENT'
+       EXPORTING
+            I_EBELN            = l_ekko_ebeln
+            I_PREVIEW          = 'X'
+            I_DATA_FROM_BUFFER = 'X'
+            I_bstyp            = l_ekko_bstyp
+       EXCEPTIONS
+            OTHERS             = 1.
+
+ENDFORM.

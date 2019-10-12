@@ -1,0 +1,321 @@
+CLASS zcl_im_me_process_po_cust DEFINITION
+  PUBLIC
+  FINAL
+  CREATE PUBLIC .
+
+  PUBLIC SECTION.
+
+    TYPE-POOLS mmmfd .
+
+    INTERFACES if_badi_interface .
+    INTERFACES if_ex_me_process_po_cust .
+
+  PROTECTED SECTION.
+
+  PRIVATE SECTION.
+
+ENDCLASS.
+
+CLASS zcl_im_me_process_po_cust IMPLEMENTATION.
+
+* <SIGNATURE>---------------------------------------------------------------------------------------+
+* | Instance Public Method ZCL_IM_ME_PROCESS_PO_CUST->IF_EX_ME_PROCESS_PO_CUST~CHECK
+* +-------------------------------------------------------------------------------------------------+
+* | [--->] IM_HEADER                      TYPE REF TO IF_PURCHASE_ORDER_MM
+* | [--->] IM_HOLD                        TYPE        MMPUR_BOOL
+* | [--->] IM_PARK                        TYPE        MMPUR_BOOL(optional)
+* | [<-->] CH_FAILED                      TYPE        MMPUR_BOOL
+* +--------------------------------------------------------------------------------------</SIGNATURE>
+  METHOD if_ex_me_process_po_cust~check .
+  ENDMETHOD.                    "IF_EX_ME_PROCESS_PO_CUST~CHECK
+
+* <SIGNATURE>---------------------------------------------------------------------------------------+
+* | Instance Public Method ZCL_IM_ME_PROCESS_PO_CUST->IF_EX_ME_PROCESS_PO_CUST~CLOSE
+* +-------------------------------------------------------------------------------------------------+
+* | [--->] IM_HEADER                      TYPE REF TO IF_PURCHASE_ORDER_MM
+* +--------------------------------------------------------------------------------------</SIGNATURE>
+  METHOD if_ex_me_process_po_cust~close .
+
+* close customer data
+    CALL FUNCTION 'MEPOBADIEX_INIT'.
+
+  ENDMETHOD.                    "IF_EX_ME_PROCESS_PO_CUST~CLOSE
+
+* <SIGNATURE>---------------------------------------------------------------------------------------+
+* | Instance Public Method ZCL_IM_ME_PROCESS_PO_CUST->IF_EX_ME_PROCESS_PO_CUST~FIELDSELECTION_HEADER
+* +-------------------------------------------------------------------------------------------------+
+* | [--->] IM_HEADER                      TYPE REF TO IF_PURCHASE_ORDER_MM
+* | [--->] IM_INITIATOR                   TYPE        MEPO_INITIATOR(optional)
+* | [<-->] CH_FIELDSELECTION              TYPE        TTYP_FIELDSELECTION_MM
+* +--------------------------------------------------------------------------------------</SIGNATURE>
+  METHOD if_ex_me_process_po_cust~fieldselection_header .
+  ENDMETHOD.
+
+* <SIGNATURE>---------------------------------------------------------------------------------------+
+* | Instance Public Method ZCL_IM_ME_PROCESS_PO_CUST->IF_EX_ME_PROCESS_PO_CUST~FIELDSELECTION_HEADER_REFKEYS
+* +-------------------------------------------------------------------------------------------------+
+* | [--->] IM_HEADER                      TYPE REF TO IF_PURCHASE_ORDER_MM
+* | [<-->] CH_KEY0                        TYPE        BREFN
+* | [<-->] CH_KEY1                        TYPE        BREFN
+* | [<-->] CH_KEY2                        TYPE        BREFN
+* | [<-->] CH_KEY3                        TYPE        BREFN
+* | [<-->] CH_KEY4                        TYPE        BREFN
+* | [<-->] CH_KEY5                        TYPE        BREFN
+* | [<-->] CH_KEY6                        TYPE        BREFN
+* +--------------------------------------------------------------------------------------</SIGNATURE>
+  METHOD if_ex_me_process_po_cust~fieldselection_header_refkeys .
+  ENDMETHOD.
+
+* <SIGNATURE>---------------------------------------------------------------------------------------+
+* | Instance Public Method ZCL_IM_ME_PROCESS_PO_CUST->IF_EX_ME_PROCESS_PO_CUST~FIELDSELECTION_ITEM
+* +-------------------------------------------------------------------------------------------------+
+* | [--->] IM_HEADER                      TYPE REF TO IF_PURCHASE_ORDER_MM
+* | [--->] IM_ITEM                        TYPE REF TO IF_PURCHASE_ORDER_ITEM_MM
+* | [<-->] CH_FIELDSELECTION              TYPE        TTYP_FIELDSELECTION_MM
+* +--------------------------------------------------------------------------------------</SIGNATURE>
+  METHOD if_ex_me_process_po_cust~fieldselection_item .
+
+    DATA: l_persistent TYPE mmpur_bool.
+
+    FIELD-SYMBOLS: <fs> LIKE LINE OF ch_fieldselection.
+
+* if the item is already on the database, we disallow to change field badi_bsgru
+    l_persistent = im_item->is_persistent( ).
+
+    IF l_persistent EQ mmpur_yes.
+      READ TABLE ch_fieldselection ASSIGNING <fs> WITH TABLE KEY metafield = mmmfd_cust_01.
+      IF sy-subrc IS INITIAL.
+        <fs>-fieldstatus = '*'. " Display
+      ENDIF.
+    ENDIF.
+
+  ENDMETHOD.                    "IF_EX_ME_PROCESS_PO_CUST~FIELDSELECTION_ITEM
+
+* <SIGNATURE>---------------------------------------------------------------------------------------+
+* | Instance Public Method ZCL_IM_ME_PROCESS_PO_CUST->IF_EX_ME_PROCESS_PO_CUST~FIELDSELECTION_ITEM_REFKEYS
+* +-------------------------------------------------------------------------------------------------+
+* | [--->] IM_ITEM                        TYPE REF TO IF_PURCHASE_ORDER_ITEM_MM
+* | [<-->] CH_KEY0                        TYPE        BREFN
+* | [<-->] CH_KEY1                        TYPE        BREFN
+* | [<-->] CH_KEY2                        TYPE        BREFN
+* | [<-->] CH_KEY3                        TYPE        BREFN
+* | [<-->] CH_KEY4                        TYPE        BREFN
+* | [<-->] CH_KEY5                        TYPE        BREFN
+* | [<-->] CH_KEY6                        TYPE        BREFN
+* +--------------------------------------------------------------------------------------</SIGNATURE>
+  METHOD if_ex_me_process_po_cust~fieldselection_item_refkeys .
+
+*  DATA: LW_MEPOITEM TYPE MEPOITEM.
+*
+*  CALL METHOD IM_ITEM->GET_DATA
+*    RECEIVING
+*      RE_DATA = LW_MEPOITEM.
+
+  ENDMETHOD.
+
+* <SIGNATURE>---------------------------------------------------------------------------------------+
+* | Instance Public Method ZCL_IM_ME_PROCESS_PO_CUST->IF_EX_ME_PROCESS_PO_CUST~INITIALIZE
+* +-------------------------------------------------------------------------------------------------+
+* +--------------------------------------------------------------------------------------</SIGNATURE>
+  METHOD if_ex_me_process_po_cust~initialize .
+
+* initializations
+    CALL FUNCTION 'MEPOBADIEX_INIT'.
+
+  ENDMETHOD.                    "IF_EX_ME_PROCESS_PO_CUST~INITIALIZE
+
+* <SIGNATURE>---------------------------------------------------------------------------------------+
+* | Instance Public Method ZCL_IM_ME_PROCESS_PO_CUST->IF_EX_ME_PROCESS_PO_CUST~OPEN
+* +-------------------------------------------------------------------------------------------------+
+* | [--->] IM_TRTYP                       TYPE        TRTYP
+* | [--->] IM_HEADER                      TYPE REF TO IF_PURCHASE_ORDER_MM
+* | [<-->] CH_VALID                       TYPE        MMPUR_BOOL
+* | [<-->] CH_DISPLAY_ONLY                TYPE        MMPUR_BOOL
+* +--------------------------------------------------------------------------------------</SIGNATURE>
+  METHOD if_ex_me_process_po_cust~open .
+
+    DATA: ls_mepoheader     TYPE mepoheader,
+          lv_memory_id(255) TYPE c.
+
+*---------------------------------------------------------------------*
+* read customer data
+*---------------------------------------------------------------------*
+* this has to be done when we open a persistent object
+    CHECK im_trtyp EQ 'V' OR im_trtyp EQ 'A'.
+
+    ls_mepoheader = im_header->get_data( ).
+
+* read customer data from database
+    CALL FUNCTION 'MEPOBADIEX_OPEN'
+      EXPORTING
+        im_ebeln = ls_mepoheader-ebeln.
+
+*--------------------------------------------------------------------*
+* SAP-SVF: Get Purchase Order Vendor Language, in BAdI ME_PROCESS_PO_CUST,
+* method OPEN or PROCESS_HEADER, export it to ABAP memory,
+* then get it in User Exit Component EXIT_SAPLMMDA_001,
+* Extension MMDA0001 (Project ZSVF0001) for Vendor Address proposal.
+*--------------------------------------------------------------------*
+    lv_memory_id = 'ZSVF_MEPOHEADER'.
+    FREE MEMORY ID lv_memory_id.
+    EXPORT mepoheader FROM ls_mepoheader TO MEMORY ID lv_memory_id.
+
+  ENDMETHOD.                    "IF_EX_ME_PROCESS_PO_CUST~OPEN
+
+* <SIGNATURE>---------------------------------------------------------------------------------------+
+* | Instance Public Method ZCL_IM_ME_PROCESS_PO_CUST->IF_EX_ME_PROCESS_PO_CUST~POST
+* +-------------------------------------------------------------------------------------------------+
+* | [--->] IM_EBELN                       TYPE        EBELN
+* | [--->] IM_HEADER                      TYPE REF TO IF_PURCHASE_ORDER_MM
+* +--------------------------------------------------------------------------------------</SIGNATURE>
+  METHOD if_ex_me_process_po_cust~post .
+
+    CALL FUNCTION 'MEPOBADIEX_POST'
+      EXPORTING
+        im_ebeln = im_ebeln.
+
+  ENDMETHOD.                    "IF_EX_ME_PROCESS_PO_CUST~POST
+
+* <SIGNATURE>---------------------------------------------------------------------------------------+
+* | Instance Public Method ZCL_IM_ME_PROCESS_PO_CUST->IF_EX_ME_PROCESS_PO_CUST~PROCESS_ACCOUNT
+* +-------------------------------------------------------------------------------------------------+
+* | [--->] IM_ACCOUNT                     TYPE REF TO IF_PURCHASE_ORDER_ACCOUNT_MM
+* +--------------------------------------------------------------------------------------</SIGNATURE>
+  METHOD if_ex_me_process_po_cust~process_account .
+* nothing to do
+  ENDMETHOD.
+
+* <SIGNATURE>---------------------------------------------------------------------------------------+
+* | Instance Public Method ZCL_IM_ME_PROCESS_PO_CUST->IF_EX_ME_PROCESS_PO_CUST~PROCESS_HEADER
+* +-------------------------------------------------------------------------------------------------+
+* | [--->] IM_HEADER                      TYPE REF TO IF_PURCHASE_ORDER_MM
+* +--------------------------------------------------------------------------------------</SIGNATURE>
+  METHOD if_ex_me_process_po_cust~process_header .
+
+    DATA: lw_mepoheader     TYPE mepoheader,
+          lt_items          TYPE purchase_order_items,
+          lw_items          TYPE purchase_order_item,
+          lw_mepoitem       TYPE mepoitem,
+          lv_memory_id(255) TYPE c.
+
+    CALL METHOD im_header->get_data
+      RECEIVING
+        re_data = lw_mepoheader.
+
+*--------------------------------------------------------------------*
+* SAP-SVF: Get Purchase Order Vendor Language, in BAdI ME_PROCESS_PO_CUST,
+* method OPEN or PROCESS_HEADER, export it to ABAP memory,
+* then get it in User Exit Component EXIT_SAPLMMDA_001,
+* Extension MMDA0001 (Project ZSVF0001) for Vendor Address proposal.
+*--------------------------------------------------------------------*
+    lv_memory_id = 'ZSVF_MEPOHEADER'.
+    FREE MEMORY ID lv_memory_id.
+    EXPORT mepoheader FROM lw_mepoheader TO MEMORY ID lv_memory_id.
+
+    CALL METHOD im_header->get_items
+      RECEIVING
+        re_items = lt_items.
+
+    LOOP AT lt_items INTO lw_items.
+      CALL METHOD lw_items-item->get_data
+        RECEIVING
+          re_data = lw_mepoitem.
+
+      IF lw_mepoitem-adrnr IS INITIAL.
+        CLEAR lw_mepoitem-adrn2.
+      ENDIF.
+
+      CALL METHOD lw_items-item->set_data
+        EXPORTING
+          im_data = lw_mepoitem.
+    ENDLOOP.
+  ENDMETHOD.
+
+* <SIGNATURE>---------------------------------------------------------------------------------------+
+* | Instance Public Method ZCL_IM_ME_PROCESS_PO_CUST->IF_EX_ME_PROCESS_PO_CUST~PROCESS_ITEM
+* +-------------------------------------------------------------------------------------------------+
+* | [--->] IM_ITEM                        TYPE REF TO IF_PURCHASE_ORDER_ITEM_MM
+* +--------------------------------------------------------------------------------------</SIGNATURE>
+  METHOD if_ex_me_process_po_cust~process_item .
+
+    DATA: ls_mepoitem TYPE mepoitem,
+          ls_customer TYPE mepo_badi_exampl,
+          ls_tbsg     TYPE tbsg,
+          lv_dummy    TYPE c LENGTH 128.
+
+    INCLUDE mm_messages_mac. "useful macros for message handling
+
+*---------------------------------------------------------------------*
+* here we check customers data
+*---------------------------------------------------------------------*
+    ls_mepoitem = im_item->get_data( ).
+
+    IF ls_mepoitem-loekz EQ 'D'.
+
+* a physical deletion of the item was carried out. therrefor we have to
+* delete customer data on the level of the item
+      ls_customer-ebeln = ls_mepoitem-ebeln.
+      ls_customer-ebelp = ls_mepoitem-ebelp.
+      CALL FUNCTION 'MEPOBADIEX_SET_DATA'
+        EXPORTING
+          im_data                    = ls_customer
+          im_physical_delete_request = 'X'.
+
+    ELSE.
+
+* update/insert operation
+      CALL FUNCTION 'MEPOBADIEX_GET_DATA'
+        EXPORTING
+          im_ebeln = ls_mepoitem-ebeln
+          im_ebelp = ls_mepoitem-ebelp
+        IMPORTING
+          ex_data  = ls_customer.
+
+* check customers data
+
+* check field badi_bsgru. This should be carried out only for new items. Once the PO is posted the
+* field should no longer be changeable. This is done in Method FIELDSELECTION_ITEM.
+      IF im_item->is_persistent( ) EQ mmpur_no.
+        IF ls_customer-badi_bsgru IS INITIAL.
+* Place the cursor onto field badi_bsgru. The metafield was defined in BAdI ME_GUI_PO_CUST,
+* Method MAP_DYNPRO_FIELDS.
+          mmpur_metafield mmmfd_cust_01.
+          MESSAGE w083(me) WITH text-002 '' INTO lv_dummy.
+          mmpur_message_forced sy-msgty sy-msgid sy-msgno
+                               sy-msgv1 sy-msgv2 sy-msgv3 sy-msgv4.
+        ELSE.
+* check whether the field is valid
+          SELECT SINGLE * FROM tbsg INTO ls_tbsg WHERE bsgru EQ ls_customer-badi_bsgru.
+          IF NOT sy-subrc IS INITIAL.
+            mmpur_metafield mmmfd_cust_01.
+            MESSAGE e083(me) WITH text-004 space INTO lv_dummy.
+            mmpur_message_forced sy-msgty sy-msgid sy-msgno
+                                 sy-msgv1 sy-msgv2 sy-msgv3 sy-msgv4.
+* invalidate the object
+            CALL METHOD im_item->invalidate( ).
+          ENDIF.
+        ENDIF.
+      ENDIF.
+
+* check field badi_afnam
+      IF ls_customer-badi_afnam IS INITIAL.
+        mmpur_metafield mmmfd_cust_02.
+        MESSAGE w083(me) WITH text-003 space INTO lv_dummy.
+        mmpur_message_forced sy-msgty sy-msgid sy-msgno
+                             sy-msgv1 sy-msgv2 sy-msgv3 sy-msgv4.
+      ENDIF.
+
+    ENDIF.
+
+  ENDMETHOD.                    "IF_EX_ME_PROCESS_PO_CUST~PROCESS_ITEM
+
+* <SIGNATURE>---------------------------------------------------------------------------------------+
+* | Instance Public Method ZCL_IM_ME_PROCESS_PO_CUST->IF_EX_ME_PROCESS_PO_CUST~PROCESS_SCHEDULE
+* +-------------------------------------------------------------------------------------------------+
+* | [--->] IM_SCHEDULE                    TYPE REF TO IF_PURCHASE_ORDER_SCHEDULE_MM
+* +--------------------------------------------------------------------------------------</SIGNATURE>
+  METHOD if_ex_me_process_po_cust~process_schedule .
+* nothing to do
+  ENDMETHOD.
+
+ENDCLASS.

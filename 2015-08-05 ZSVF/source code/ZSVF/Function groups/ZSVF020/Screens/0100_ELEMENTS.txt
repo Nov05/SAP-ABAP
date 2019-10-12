@@ -1,0 +1,12 @@
+TCTRL_ZSVF020	
+VIM_FRAME_FIELD	____________________________________________________________
+*ZSVF020-LFDNR	No.
+*ZSVF020-ZSVF_CMD_TYPE	Cmd Type
+*ZSVF020-BTCXPGPAR	Parameters
+VIM_MARKED	_
+ZSVF020-LFDNR	___
+ZSVF020-ZSVF_CMD_TYPE	___
+ZSVF020-BTCXPGPAR	____________________________________________________________________________________________________________________________________
+VIM_POSI_PUSH	____________________
+VIM_POSITION_INFO	______________________________
+OK_CODE	____

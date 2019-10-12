@@ -1,0 +1,6 @@
+* regenerated at 2015-01-30 13:47:46
+FUNCTION-POOL ZSVF003                    MESSAGE-ID SV.
+
+* INCLUDE LZSVF003D...                       " Local class definition
+  INCLUDE LSVIMDAT                                . "general data decl.
+  INCLUDE LZSVF003T00                             . "view rel. data dcl.

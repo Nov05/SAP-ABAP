@@ -1,0 +1,89 @@
+FUNCTION Z_SVF_PO_TELNUMBER_FORMAT.
+*"----------------------------------------------------------------------
+*"*"Local Interface:
+*"  IMPORTING
+*"     VALUE(I_SPRAS) TYPE  SPRAS DEFAULT 1
+*"     VALUE(I_BUKRS) TYPE  BUKRS OPTIONAL
+*"     VALUE(I_TELNUMBER) OPTIONAL
+*"     VALUE(EXTENSION_IN) TYPE  ADR2-TEL_EXTENS OPTIONAL
+*"     VALUE(WILDCARDS) TYPE  SPHOPTIONS-OPTION1 OPTIONAL
+*"  EXPORTING
+*"     VALUE(O_TELNUMBER)
+*"     VALUE(NUMBER_CANONICAL) TYPE  SPH_CALL-NO_DIALED
+*"     VALUE(COUNTRY_CODE) TYPE  T005K-TELEFTO
+*"     VALUE(AREA_CODE) TYPE  SPH_CALL-NO_DIALED
+*"     VALUE(SUBSCRIBER) TYPE  SPH_CALL-NO_DIALED
+*"     VALUE(EXTENSION_OUT) TYPE  SPH_CALL-NO_DIALED
+*"     VALUE(WORST_ERROR) TYPE  ADDR_ERROR-MSG_TYPE
+*"     VALUE(NUMBER_CANONICAL_LONG) TYPE  CHAR100
+*"  TABLES
+*"      MESSAGES STRUCTURE  ADDR_ERROR OPTIONAL
+*"----------------------------------------------------------------------
+* Change Log:
+* 1. 2015-06-12 Telephone number format is no longer
+*    decided by custom table for vendor country, but
+*    company country.
+*----------------------------------------------------------------------*
+  DATA: "LV_LAND1_LIFNR TYPE LFA1-LAND1,    "Deleted, Change 1
+    LV_LAND1_BUKRS TYPE T001-LAND1,
+*        LV_LAND1_EKGRP TYPE ZSVF022-LAND1, "Deleted, Change 1
+    LV_TELNUMBER   TYPE ADR2-TEL_NUMBER.
+
+  O_TELNUMBER = I_TELNUMBER.
+  CHECK I_TELNUMBER IS NOT INITIAL.
+
+  CHECK I_BUKRS IS NOT INITIAL.
+*  AND I_LIFNR IS NOT INITIAL   "Deleted, Change 1
+*  AND I_EKGRP IS NOT INITIAL.  "Deleted, Change 1
+
+* Get company country
+  SELECT SINGLE LAND1 FROM T001 INTO (LV_LAND1_BUKRS)
+    WHERE BUKRS = I_BUKRS.
+
+* Deleted by Change 1
+** Get vendor's country
+*  SELECT SINGLE LAND1 FROM LFA1 INTO (LV_LAND1_LIFNR)
+*    WHERE LIFNR = I_LIFNR.
+*
+** Get purchase group country
+*  SELECT SINGLE LAND1 FROM ZSVF022 INTO (LV_LAND1_EKGRP)
+*    WHERE EKGRP = I_EKGRP.
+*  IF SY-SUBRC <> 0.
+*    RETURN.
+*  ENDIF.
+
+*  IF LV_LAND1_BUKRS = LV_LAND1_LIFNR
+*    AND LV_LAND1_BUKRS = LV_LAND1_EKGRP
+*    AND LV_LAND1_LIFNR = LV_LAND1_EKGRP.
+*    RETURN.
+*  ENDIF.
+
+  CASE I_SPRAS.
+    WHEN '1'.
+      O_TELNUMBER = I_TELNUMBER.
+    WHEN OTHERS.
+      LV_TELNUMBER = I_TELNUMBER.
+      CALL FUNCTION 'TELNUMBER_FORMAT'
+        EXPORTING
+          COUNTRY               = LV_LAND1_BUKRS "LV_LAND1_EKGRP "Change 1
+          TELNUMBER             = LV_TELNUMBER
+          EXTENSION_IN          = EXTENSION_IN
+          WILDCARDS             = WILDCARDS
+        IMPORTING
+          NUMBER_CANONICAL      = NUMBER_CANONICAL
+          COUNTRY_CODE          = COUNTRY_CODE
+          AREA_CODE             = AREA_CODE
+          SUBSCRIBER            = SUBSCRIBER
+          EXTENSION_OUT         = EXTENSION_OUT
+          WORST_ERROR           = WORST_ERROR
+          NUMBER_CANONICAL_LONG = NUMBER_CANONICAL_LONG
+        TABLES
+          MESSAGES              = MESSAGES.
+
+      O_TELNUMBER = NUMBER_CANONICAL_LONG.
+      CONDENSE O_TELNUMBER NO-GAPS.
+      REPLACE ALL OCCURRENCES OF '(' IN O_TELNUMBER WITH '-'.
+      REPLACE ALL OCCURRENCES OF ')' IN O_TELNUMBER WITH '-'.
+  ENDCASE. "case i_spras
+
+ENDFUNCTION.

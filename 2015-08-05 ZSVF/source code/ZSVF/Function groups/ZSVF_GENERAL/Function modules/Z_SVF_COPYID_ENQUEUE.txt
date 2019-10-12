@@ -1,0 +1,64 @@
+FUNCTION Z_SVF_COPYID_ENQUEUE .
+*"----------------------------------------------------------------------
+*"*"Local Interface:
+*"  IMPORTING
+*"     VALUE(I_DOC_TYPE) TYPE  ZSVF_DOC_TYPE
+*"     VALUE(I_DOC_NUM)
+*"     VALUE(I_DOC_ITEM) OPTIONAL
+*"  EXCEPTIONS
+*"      ENQUEUE_DOC_ID_FAILURE
+*"----------------------------------------------------------------------
+* Log:
+* 1. Created by Arwen Liu
+*----------------------------------------------------------------------*
+  DATA: LV_LOCKED_ZSVF001 TYPE C,
+        LV_DOC_NUM        TYPE ZSVF_DOC_NUM,
+        LV_DOC_ITEM       TYPE ZSVF_DOC_ITEM.
+
+*----------------------------------------------------------------------*
+* Check Input Parameters
+*----------------------------------------------------------------------*
+  LV_DOC_NUM = I_DOC_NUM.
+  LV_DOC_ITEM = I_DOC_ITEM.
+
+  DO 3 TIMES.
+    CALL FUNCTION 'ENQUEUE_EZSVF001_DOC_ID'
+      EXPORTING
+*       MODE_ZSVF001   = 'E'
+*       MANDT          = SY-MANDT
+        ZSVF_DOC_TYPE  = I_DOC_TYPE
+        ZSVF_DOC_NUM   = LV_DOC_NUM
+        ZSVF_DOC_ITEM  = LV_DOC_ITEM
+*       X_ZSVF_DOC_TYPE       = ' '
+*       X_ZSVF_DOC_NUM = ' '
+*       X_ZSVF_DOC_ITEM       = ' '
+*       _SCOPE         = '2'
+*       _WAIT          = ' '
+*       _COLLECT       = ' '
+      EXCEPTIONS
+        FOREIGN_LOCK   = 1
+        SYSTEM_FAILURE = 2
+        OTHERS         = 3.
+
+    IF SY-SUBRC = 0.
+      LV_LOCKED_ZSVF001 = 'X'.
+      EXIT. "exit do
+    ELSE.
+      WAIT UP TO 1 SECONDS.
+    ENDIF.
+  ENDDO.
+
+  IF LV_LOCKED_ZSVF001 <> 'X'.
+* Error log
+    "## COPYID: & & & #######
+    MACRO_SVF_LOG_WRITE_1 'E'    "Message Type
+                          '002'  "Message Number
+                          I_DOC_TYPE "Message Variant 1
+                          I_DOC_NUM "Message Variant 2
+                          I_DOC_ITEM "Message Variant 3
+                          ''. "Message Variant 4
+* Exception
+    RAISE ENQUEUE_DOC_ID_FAILURE.
+  ENDIF.
+
+ENDFUNCTION.

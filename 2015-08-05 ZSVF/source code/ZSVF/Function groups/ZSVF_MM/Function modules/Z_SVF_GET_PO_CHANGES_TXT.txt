@@ -1,0 +1,121 @@
+FUNCTION Z_SVF_GET_PO_CHANGES_TXT.
+*"----------------------------------------------------------------------
+*"*"Local Interface:
+*"  IMPORTING
+*"     VALUE(I_LANGU) TYPE  SY-LANGU DEFAULT SY-LANGU
+*"  TABLES
+*"      IT_PO_CHANGES_KOM STRUCTURE  ZSVF_PO_CHANGES_KOM OPTIONAL
+*"      OT_PO_CHANGES_TXT STRUCTURE  ZSVF_PO_CHANGES_TXT OPTIONAL
+*"----------------------------------------------------------------------
+  DATA: LW_PO_CHANGES_TXT TYPE ZSVF_PO_CHANGES_TXT,
+        LW_PO_CHANGES_KOM TYPE ZSVF_PO_CHANGES_KOM,
+        LT_TEXTPOOL       TYPE TABLE OF TEXTPOOL,
+        LW_TEXTPOOL       TYPE TEXTPOOL,
+        LV_KEY            TYPE TEXTPOOL-KEY, "text element key
+        LV_TABNAME        TYPE ROLLNAME,
+        LT_FIELDINFO      TYPE TABLE OF DFIES,
+        LW_FIELDINFO      TYPE DFIES,
+        LV_INDEX          TYPE SY-INDEX,
+        LV_ZSVF_CHGTXT    TYPE ZSVF_CHGTXT.
+
+  FIELD-SYMBOLS: <FLD_CHGIND> TYPE ANY. "Field of change indicators
+
+  CLEAR OT_PO_CHANGES_TXT[].
+  CHECK IT_PO_CHANGES_KOM[] IS NOT INITIAL.
+
+  READ TEXTPOOL 'SAPLZSVF_MM' INTO LT_TEXTPOOL LANGUAGE I_LANGU.
+
+  LOOP AT IT_PO_CHANGES_KOM INTO LW_PO_CHANGES_KOM.
+    CLEAR: LW_PO_CHANGES_TXT, LV_ZSVF_CHGTXT.
+
+    UNASSIGN <FLD_CHGIND>.
+    IF LW_PO_CHANGES_KOM-EBELP IS NOT INITIAL.
+      LV_TABNAME = GC_CHG_STRUC_I_PURO.
+      ASSIGN LW_PO_CHANGES_KOM-ZSVF_CHAGEID_I TO <FLD_CHGIND>.
+    ELSE.
+      LV_TABNAME = GC_CHG_STRUC_H_PURO.
+      ASSIGN LW_PO_CHANGES_KOM-ZSVF_CHAGEID_H TO <FLD_CHGIND>.
+    ENDIF.
+    CHECK <FLD_CHGIND> IS ASSIGNED.
+
+* Get field information
+    CLEAR LT_FIELDINFO[].
+    PERFORM FRM_DDIF_FIELDINFO_GET_LANGU TABLES LT_FIELDINFO
+                                         USING  LV_TABNAME
+                                                I_LANGU.
+    CHECK LT_FIELDINFO[] IS NOT INITIAL.
+
+    LOOP AT LT_FIELDINFO INTO LW_FIELDINFO.
+      CLEAR LV_KEY.
+
+* No output of these fields when in English
+      IF I_LANGU = 'E' AND
+        ( LW_FIELDINFO-FIELDNAME = 'MWSKZ'
+          OR LW_FIELDINFO-FIELDNAME = 'BRTER' ).
+        CONTINUE.
+      ENDIF.
+
+      LV_INDEX = SY-TABIX - 1.
+      CHECK <FLD_CHGIND>+LV_INDEX(1) = 'X'.
+
+* Get texts from text pool, if not found, get data
+* dictionary texts. Why not put the texts in a custom table?
+* Cause it is pain to ask for permission from Daikin DKI to
+* create a new table. Sorry that you have to change the code here.
+      CASE LW_FIELDINFO-FIELDNAME.
+        WHEN 'BEDNR'.
+          LV_KEY = '002'.
+        WHEN 'MATNR'.
+          LV_KEY = '003'.
+        WHEN 'MENGE'.
+          LV_KEY = '004'.
+        WHEN 'ZSVF_NETPR'. "##/####
+          LV_KEY = '005'.
+*        WHEN 'NETWR'. "##### no output
+*          LV_KEY = '006'.
+        WHEN 'EINDT'.
+          LV_KEY = '007'.
+        WHEN 'MWSKZ'.
+          LV_KEY = '008'.
+*        WHEN 'BRTWR'. "#### no output
+*          LV_KEY = '009'.
+        WHEN 'TXZ01'.
+          LV_KEY = '010'.
+        WHEN 'ZSVF_RMKTXT'.
+          LV_KEY = '011'.
+        WHEN OTHERS.
+          CONTINUE.
+      ENDCASE.
+
+      IF LV_KEY IS NOT INITIAL.
+        READ TABLE LT_TEXTPOOL INTO LW_TEXTPOOL WITH KEY KEY = LV_KEY.
+        IF SY-SUBRC = 0.
+          CONCATENATE LV_ZSVF_CHGTXT ',' LW_TEXTPOOL-ENTRY
+                      INTO LV_ZSVF_CHGTXT SEPARATED BY SPACE.
+          CONTINUE. "loop at lt_fieldinfo
+        ENDIF.
+      ENDIF.
+      CONCATENATE LV_ZSVF_CHGTXT ',' LW_FIELDINFO-SCRTEXT_L
+                  INTO LV_ZSVF_CHGTXT SEPARATED BY SPACE.
+    ENDLOOP. "loop at lt_fieldinfo
+
+    IF LV_ZSVF_CHGTXT IS NOT INITIAL.
+* Add "has/have been changed."
+      READ TABLE LT_TEXTPOOL INTO LW_TEXTPOOL WITH KEY KEY = '001'.
+      CONCATENATE LV_ZSVF_CHGTXT LW_TEXTPOOL-ENTRY INTO LV_ZSVF_CHGTXT
+                                                   SEPARATED BY SPACE.
+      REPLACE ALL OCCURRENCES OF ' ,' IN LV_ZSVF_CHGTXT WITH ','.
+      SHIFT LV_ZSVF_CHGTXT LEFT DELETING LEADING ','.
+      CONDENSE LV_ZSVF_CHGTXT.
+      CONCATENATE '***' LV_ZSVF_CHGTXT '***' INTO LV_ZSVF_CHGTXT
+                                             SEPARATED BY SPACE.
+* Output
+      LW_PO_CHANGES_TXT-EBELN = LW_PO_CHANGES_KOM-EBELN.
+      LW_PO_CHANGES_TXT-EBELP = LW_PO_CHANGES_KOM-EBELP.
+      LW_PO_CHANGES_TXT-ZSVF_CHGTXT = LV_ZSVF_CHGTXT.
+      APPEND LW_PO_CHANGES_TXT TO OT_PO_CHANGES_TXT.
+    ENDIF. "IF LV_ZSVF_CHGTXT IS NOT INITIAL.
+
+  ENDLOOP. "LOOP AT IT_PO_CHANGES_KOM
+
+ENDFUNCTION.

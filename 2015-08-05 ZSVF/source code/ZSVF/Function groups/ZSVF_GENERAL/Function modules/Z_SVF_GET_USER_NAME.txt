@@ -1,0 +1,34 @@
+FUNCTION Z_SVF_GET_USER_NAME.
+*"----------------------------------------------------------------------
+*"*"Local Interface:
+*"  IMPORTING
+*"     VALUE(I_USRID) TYPE  USRID
+*"  EXPORTING
+*"     VALUE(O_NAME_TEXT) TYPE  NAME_TEXT
+*"     VALUE(O_FULL_NAME_ZH) TYPE  ZSVF_BUYER
+*"     VALUE(O_ID_NAME_ZH) TYPE  ZSVF_BUYER
+*"----------------------------------------------------------------------
+  DATA: LW_V_USR_NAME TYPE V_USR_NAME.
+
+  CLEAR: O_NAME_TEXT, O_FULL_NAME_ZH, O_ID_NAME_ZH.
+  CHECK I_USRID IS NOT INITIAL.
+
+  SELECT SINGLE * FROM V_USR_NAME
+    INTO LW_V_USR_NAME
+    WHERE BNAME = I_USRID.
+
+  IF SY-SUBRC = 0.
+    O_NAME_TEXT = LW_V_USR_NAME-NAME_TEXT.
+    CONCATENATE LW_V_USR_NAME-NAME_LAST
+                LW_V_USR_NAME-NAME_FIRST
+                INTO O_FULL_NAME_ZH.
+    CONCATENATE I_USRID
+                O_FULL_NAME_ZH
+                INTO O_ID_NAME_ZH SEPARATED BY SPACE.
+  ELSE.
+* ## ID ####### ID ############ ID
+    O_NAME_TEXT = I_USRID.
+    O_ID_NAME_ZH = I_USRID.
+  ENDIF.
+
+ENDFUNCTION.

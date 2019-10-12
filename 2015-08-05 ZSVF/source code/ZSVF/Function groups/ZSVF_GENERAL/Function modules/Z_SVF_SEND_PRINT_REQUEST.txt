@@ -1,0 +1,231 @@
+FUNCTION Z_SVF_SEND_PRINT_REQUEST.
+*"----------------------------------------------------------------------
+*"*"Local Interface:
+*"  IMPORTING
+*"     VALUE(I_PRINT_KEY) TYPE  ZSVF001_KEY
+*"     VALUE(I_COMMIT) TYPE  XFELD OPTIONAL
+*"  TABLES
+*"      IT_DOC_HEADER OPTIONAL
+*"      IT_DOC_ITEM OPTIONAL
+*"  EXCEPTIONS
+*"      SEND_PRINT_REQUEST_ERROR
+*"      PRINTER_NAME_ERROR
+*"----------------------------------------------------------------------
+  DATA: LV_HEADER_STRUC  TYPE ROLLNAME,
+        LV_ITEM_STRUC    TYPE ROLLNAME,
+* For getting SVF Job ID
+        LV_JOBID         TYPE ZSVF_JOBID,
+        LV_ZSVF_SPRAS    TYPE ZSVF_SPRAS,   "For PO only
+        LV_ZSVF_LABLTYPE TYPE ZSVF_LABLTYPE, "For Label only
+        LV_ZSVF_LABLVER  TYPE ZSVF_LABLVER, "For Label only
+* Check DDIC table or structure existance
+        LV_TAB_FOUND     TYPE C,
+* For dynamically creating internal table
+        LR_DATA          TYPE REF TO DATA.
+
+  FIELD-SYMBOLS: <LW_DOC_HEADER> TYPE ANY,
+                 <LW_DOC_ITEM>   TYPE ANY,
+                 <LT_HEADER>     TYPE STANDARD TABLE,
+                 <LT_ITEM>       TYPE STANDARD TABLE,
+                 <LW_HEADER>     TYPE ANY,
+                 <LW_ITEM>       TYPE ANY,
+                 <FIELD>         TYPE ANY.
+
+  DEFINE MACRO_STATUS_CHANGE.
+* Update status table
+    CALL FUNCTION 'Z_SVF_STATUS_CHANGE'
+      EXPORTING
+        PRINT_KEY            = I_PRINT_KEY
+        ZSVF_PRTSTAT         = &1
+*     ZSVF_CHAGER          = SY-UNAME
+*     ZSVF_CHDDATE         = SY-DATUM
+      EXCEPTIONS
+        PRINT_KEY_INVALID    = 1
+        PRINT_STATUS_INVALID = 2
+        MODIFY_TABLE_ERROR   = 3
+        OTHERS               = 4.
+    IF SY-SUBRC = 0 AND I_COMMIT = 'X'.
+      COMMIT WORK AND WAIT.
+    ENDIF.
+  END-OF-DEFINITION.
+*----------------------------------------------------------------------*
+* Creat Internal CSV Header and Item Tables
+*----------------------------------------------------------------------*
+* Get header structure name
+  CONCATENATE 'ZSVF_CSV_HEADER_'
+              I_PRINT_KEY-ZSVF_DOC_TYPE INTO LV_HEADER_STRUC.
+  PERFORM FRM_CHECK_TAB_NAME USING LV_HEADER_STRUC
+                             CHANGING LV_TAB_FOUND.
+  IF LV_TAB_FOUND <> 'X'.
+    CLEAR LV_HEADER_STRUC.
+  ENDIF.
+
+* Get item structure name
+  CONCATENATE 'ZSVF_CSV_ITEM_'
+              I_PRINT_KEY-ZSVF_DOC_TYPE INTO LV_ITEM_STRUC.
+  PERFORM FRM_CHECK_TAB_NAME USING LV_ITEM_STRUC
+                             CHANGING LV_TAB_FOUND.
+  IF LV_TAB_FOUND <> 'X'.
+    CLEAR LV_ITEM_STRUC.
+  ENDIF.
+
+* Create internal table dynamically
+  IF LV_HEADER_STRUC IS NOT INITIAL.
+    CREATE DATA LR_DATA TYPE (LV_HEADER_STRUC).
+    ASSIGN LR_DATA->* TO <LW_HEADER>.
+    CHECK <LW_HEADER> IS ASSIGNED.
+
+    CREATE DATA LR_DATA TYPE TABLE OF (LV_HEADER_STRUC).
+    ASSIGN LR_DATA->* TO <LT_HEADER>.
+  ELSE.
+    CREATE DATA LR_DATA TYPE TABLE OF STRING.
+    ASSIGN LR_DATA->* TO <LT_ITEM>.
+  ENDIF.
+  CHECK <LT_HEADER> IS ASSIGNED.
+
+  IF LV_ITEM_STRUC IS NOT INITIAL.
+    CREATE DATA LR_DATA TYPE (LV_ITEM_STRUC).
+    ASSIGN LR_DATA->* TO <LW_ITEM>.
+    CHECK <LW_ITEM> IS ASSIGNED.
+
+    CREATE DATA LR_DATA TYPE TABLE OF (LV_ITEM_STRUC).
+    ASSIGN LR_DATA->* TO <LT_ITEM>.
+  ELSE.
+    CREATE DATA LR_DATA TYPE TABLE OF STRING.
+    ASSIGN LR_DATA->* TO <LT_ITEM>.
+  ENDIF.
+  CHECK <LT_ITEM> IS ASSIGNED.
+
+*----------------------------------------------------------------------*
+* Convert Document Data to CSV Data
+*----------------------------------------------------------------------*
+  LOOP AT IT_DOC_HEADER ASSIGNING <LW_DOC_HEADER>.
+    MOVE-CORRESPONDING <LW_DOC_HEADER> TO <LW_HEADER>.
+    CASE I_PRINT_KEY-ZSVF_DOC_TYPE.
+      WHEN GC_DOC_TYPE_LAPT. "Label
+        PERFORM FRM_CONVERT_DOC_TO_CSV_LAPT TABLES <LT_HEADER>
+                                            USING <LW_DOC_HEADER>.
+      WHEN GC_DOC_TYPE_PURO. "Purchase Order
+        "Get header long text etc.
+        PERFORM FRM_GET_HEADER_LTEXT_PURO USING <LW_DOC_HEADER>
+                                          CHANGING <LW_HEADER>.
+        APPEND <LW_HEADER> TO <LT_HEADER>.
+      WHEN GC_DOC_TYPE_GRPO. "Goods Receipt against Purchase Order
+        "Get header long text etc.
+        PERFORM FRM_GET_HEADER_LTEXT_GRPO USING <LW_DOC_HEADER>
+                                          CHANGING <LW_HEADER>.
+        APPEND <LW_HEADER> TO <LT_HEADER>.
+      WHEN OTHERS.
+        APPEND <LW_HEADER> TO <LT_HEADER>.
+    ENDCASE.
+
+    LOOP AT IT_DOC_ITEM ASSIGNING <LW_DOC_ITEM>.
+      MOVE-CORRESPONDING <LW_DOC_ITEM> TO <LW_ITEM>.
+      CASE I_PRINT_KEY-ZSVF_DOC_TYPE.
+        WHEN GC_DOC_TYPE_PURO. "Purchase Order
+          "Get item long text
+          PERFORM FRM_GET_ITEM_LTEXT_PURO USING <LW_DOC_HEADER>
+                                                <LW_DOC_ITEM>
+                                          CHANGING <LW_ITEM>.
+          APPEND <LW_ITEM> TO <LT_ITEM>.
+        WHEN OTHERS.
+          APPEND <LW_ITEM> TO <LT_ITEM>.
+      ENDCASE.
+    ENDLOOP. "LOOP AT IT_DOC_ITEM
+  ENDLOOP. "LOOP AT IT_DOC_ITEM
+
+*----------------------------------------------------------------------*
+* Get Job ID
+*----------------------------------------------------------------------*
+  READ TABLE IT_DOC_HEADER INDEX 1 ASSIGNING <LW_DOC_HEADER>.
+  IF SY-SUBRC = 0.
+    CASE I_PRINT_KEY-ZSVF_DOC_TYPE.
+      WHEN GC_DOC_TYPE_PURO.
+* Get SVF Form Language
+        ASSIGN COMPONENT 'ZSVF_SPRAS' OF STRUCTURE <LW_DOC_HEADER>
+               TO <FIELD>.
+        IF SY-SUBRC = 0.
+          LV_ZSVF_SPRAS = <FIELD>.
+        ENDIF.
+      WHEN GC_DOC_TYPE_LAPT.
+* Get Label Type
+        ASSIGN COMPONENT 'ZSVF_LABLTYPE' OF STRUCTURE <LW_DOC_HEADER>
+               TO <FIELD>.
+        IF SY-SUBRC = 0.
+          LV_ZSVF_LABLTYPE = <FIELD>.
+        ENDIF.
+* Get Label Version
+        ASSIGN COMPONENT 'ZSVF_LABLVER' OF STRUCTURE <LW_DOC_HEADER>
+               TO <FIELD>.
+        IF SY-SUBRC = 0.
+          LV_ZSVF_LABLVER = <FIELD>.
+        ENDIF.
+    ENDCASE.
+  ENDIF.
+
+  CALL FUNCTION 'Z_SVF_GET_JOBID'
+    EXPORTING
+      I_PRINT_KEY         = I_PRINT_KEY
+      I_SPRAS             = LV_ZSVF_SPRAS    "2014-10-27 for PO only
+      I_LABLTYPE          = LV_ZSVF_LABLTYPE "2014-10-27 for Label only
+      I_LABLVER           = LV_ZSVF_LABLVER  "2014-10-27 for Label only
+    IMPORTING
+      O_JOBID             = LV_JOBID
+    EXCEPTIONS
+      SVF_JOBID_NOT_FOUND = 1
+      OTHERS              = 2.
+  IF SY-SUBRC <> 0.
+    RAISE SEND_PRINT_REQUEST_ERROR.
+  ENDIF.
+
+*----------------------------------------------------------------------*
+* Create CSV file
+*----------------------------------------------------------------------*
+  CALL FUNCTION 'Z_SVF_CSV_FILE_CREATE'
+    EXPORTING
+      I_PRINT_KEY         = I_PRINT_KEY
+      I_HEADER_STRUC      = LV_HEADER_STRUC
+      I_ITEM_STRUC        = LV_ITEM_STRUC
+    TABLES
+      IT_HEADER           = <LT_HEADER>
+      IT_ITEM             = <LT_ITEM>
+    EXCEPTIONS
+      PRINT_KEY_ERROR     = 1
+      GET_FILEPATH_ERROR  = 2
+      OPEN_DATASET_ERROR  = 3
+      CLOSE_DATASET_ERROR = 4
+      OTHERS              = 5.
+  IF SY-SUBRC <> 0.
+    MACRO_STATUS_CHANGE GC_STATUS_B1.
+    RAISE SEND_PRINT_REQUEST_ERROR.
+  ELSE.
+    MACRO_STATUS_CHANGE GC_STATUS_B0.
+  ENDIF.
+
+*----------------------------------------------------------------------*
+* Send to SVF system
+*----------------------------------------------------------------------*
+  CALL FUNCTION 'Z_SVF_FILE_SEND_TO_SVF'
+    EXPORTING
+      I_PRINT_KEY             = I_PRINT_KEY
+      I_JOBID                 = LV_JOBID
+    EXCEPTIONS
+      PRINT_KEY_INVALID       = 1
+      EXECUTE_COMMAND_FAILURE = 2
+      FILEPATH_GET_ERROR      = 3
+      PROGRAM_INTERNAL_ERROR  = 4
+      PRINTER_NAME_ERROR      = 5
+      OTHERS                  = 6.
+  CASE SY-SUBRC.
+    WHEN 0.
+      MACRO_STATUS_CHANGE GC_STATUS_C0.
+    WHEN 5.
+      "##### SVF###########SVF #####
+      MACRO_STATUS_CHANGE GC_STATUS_C0.
+      RAISE PRINTER_NAME_ERROR.
+    WHEN OTHERS.
+      MACRO_STATUS_CHANGE GC_STATUS_C1.
+      RAISE SEND_PRINT_REQUEST_ERROR.
+  ENDCASE.
+
+ENDFUNCTION.

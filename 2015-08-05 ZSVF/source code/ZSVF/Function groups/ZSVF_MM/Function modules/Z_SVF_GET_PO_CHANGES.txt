@@ -1,0 +1,224 @@
+FUNCTION Z_SVF_GET_PO_CHANGES.
+*"----------------------------------------------------------------------
+*"*"Local Interface:
+*"  IMPORTING
+*"     VALUE(I_STRUC_TYPE) TYPE  CHAR1
+*"     VALUE(I_STRUC_NAME) TYPE  ROLLNAME
+*"     VALUE(I_EKKO) TYPE  EKKO OPTIONAL
+*"     VALUE(I_EKPO) TYPE  EKPO OPTIONAL
+*"     VALUE(I_EKET) TYPE  EKET OPTIONAL
+*"  EXPORTING
+*"     VALUE(O_PO_CHANGES_KOM) TYPE  ZSVF_PO_CHANGES_KOM
+*"----------------------------------------------------------------------
+  DATA: LT_FIELDS_COMP TYPE TABLE OF DFIES, "Fields that need to compare
+        LW_FIELDS_COMP TYPE DFIES,
+        LT_FIELDS_EKKO TYPE TABLE OF DFIES,
+        LT_FIELDS_EKPO TYPE TABLE OF DFIES,
+        LT_FIELDS_EKET TYPE TABLE OF DFIES,
+* For change document
+        LT_CDPOS       TYPE TABLE OF CDPOS,
+        LW_CDPOS       TYPE CDPOS,
+        LV_TABNAME     TYPE CDPOS-TABNAME,
+        LV_TABKEY      TYPE CDPOS-TABKEY,
+        LV_FNAME       TYPE CDPOS-FNAME,
+* For database records
+        LT_EKKO_DB     TYPE TABLE OF EKKO,
+        LW_EKKO_DB     TYPE EKKO,
+        LT_EKPO_DB     TYPE TABLE OF EKPO,
+        LW_EKPO_DB     TYPE EKPO,
+        LT_EKET_DB     TYPE TABLE OF EKET,
+        LW_EKET_DB     TYPE EKET.
+
+  DATA: LV_EBELN      TYPE EBELN,
+        LV_EBELP      TYPE EBELP,
+        LV_ETENR      TYPE EKET-ETENR,
+        LV_TABIX      TYPE I,
+        LV_CHANGE_IND TYPE ZSVF_CHAGEID_H. "Change indicators
+
+* Indicator of changes
+  DATA: LV_IND_NETWR      TYPE C, "Net Order Value in PO Currency
+        LV_IND_BRTWR      TYPE C, "Gross order value in PO currency
+        LV_IND_ZSVF_NETPR TYPE C, "##/####
+        LV_IND_MENGE      TYPE C.
+
+  FIELD-SYMBOLS: <FLD_OLD>   TYPE ANY,
+                 <FLD_NEW>   TYPE ANY,
+                 <STRUC_OLD> TYPE ANY,
+                 <STRUC_NEW> TYPE ANY.
+
+  CLEAR O_PO_CHANGES_KOM.
+
+* Get fields
+  CLEAR LT_FIELDS_COMP[].
+  PERFORM FRM_DDIF_FIELDINFO_GET TABLES LT_FIELDS_COMP
+                                 USING I_STRUC_NAME.
+  CHECK LT_FIELDS_COMP[] IS NOT INITIAL.
+
+* Get database data
+  CASE I_STRUC_TYPE.
+    WHEN GC_STRUC_TYPE_HEADER.
+      LV_EBELN = I_EKKO-EBELN.
+      CLEAR LT_FIELDS_EKKO[].
+      PERFORM FRM_DDIF_FIELDINFO_GET TABLES LT_FIELDS_EKKO
+                                     USING 'EKKO'.
+      SELECT SINGLE * FROM EKKO
+                      INTO LW_EKKO_DB
+                      WHERE EBELN = I_EKKO-EBELN.
+      "Purchase Order is being created. No changes.
+      IF SY-SUBRC <> 0.
+        RETURN.
+      ENDIF.
+    WHEN GC_STRUC_TYPE_ITEM.
+      LV_EBELN = I_EKPO-EBELN.
+      LV_EBELP = I_EKPO-EBELP.
+      LV_ETENR = I_EKET-ETENR.
+      CLEAR: LT_FIELDS_EKPO[], LT_FIELDS_EKET[].
+      PERFORM FRM_DDIF_FIELDINFO_GET TABLES LT_FIELDS_EKPO
+                                     USING 'EKPO'.
+      PERFORM FRM_DDIF_FIELDINFO_GET TABLES LT_FIELDS_EKET
+                                     USING 'EKET'.
+      SELECT SINGLE * FROM EKPO
+                      INTO LW_EKPO_DB
+                      WHERE EBELN = I_EKPO-EBELN
+                      AND EBELP = I_EKPO-EBELP.
+      "Purchase order is being created. No changes.
+      IF SY-SUBRC <> 0.
+        RETURN.
+      ENDIF.
+      SELECT SINGLE * FROM EKET
+                      INTO LW_EKET_DB
+                      WHERE EBELN = I_EKET-EBELN
+                      AND EBELP = I_EKET-EBELP
+                      AND ETENR = I_EKET-ETENR.
+  ENDCASE.
+
+* Get change documents
+  SELECT * INTO TABLE LT_CDPOS
+           FROM CDPOS
+           WHERE OBJECTCLAS = 'EINKBELEG' "Einkaufen
+           AND OBJECTID = LV_EBELN
+           AND CHNGIND IN ('U','D').
+
+* Get changes
+  LOOP AT LT_FIELDS_COMP INTO LW_FIELDS_COMP.
+
+    LV_TABIX = SY-TABIX - 1.
+    CLEAR: LV_TABNAME, LV_TABKEY.
+
+    UNASSIGN: <STRUC_NEW>, <STRUC_OLD>.
+    READ TABLE LT_FIELDS_EKKO WITH KEY FIELDNAME = LW_FIELDS_COMP-FIELDNAME
+                              TRANSPORTING NO FIELDS.
+    IF SY-SUBRC = 0.
+      ASSIGN I_EKKO TO <STRUC_NEW>.
+      ASSIGN LW_EKKO_DB TO <STRUC_OLD>.
+      LV_TABNAME = 'EKKO'.
+      CONCATENATE SY-MANDT LV_EBELN INTO LV_TABKEY.
+    ENDIF.
+
+    IF <STRUC_NEW> IS NOT ASSIGNED.
+      READ TABLE LT_FIELDS_EKPO WITH KEY FIELDNAME = LW_FIELDS_COMP-FIELDNAME
+                                TRANSPORTING NO FIELDS.
+      IF SY-SUBRC = 0.
+        ASSIGN I_EKPO TO <STRUC_NEW>.
+        ASSIGN LW_EKPO_DB TO <STRUC_OLD>.
+        LV_TABNAME = 'EKPO'.
+        CONCATENATE SY-MANDT LV_EBELN LV_EBELP INTO LV_TABKEY.
+      ENDIF.
+    ENDIF.
+
+    IF <STRUC_NEW> IS NOT ASSIGNED.
+      READ TABLE LT_FIELDS_EKET WITH KEY FIELDNAME = LW_FIELDS_COMP-FIELDNAME
+                                TRANSPORTING NO FIELDS.
+      IF SY-SUBRC = 0.
+        ASSIGN I_EKET TO <STRUC_NEW>.
+        ASSIGN LW_EKET_DB TO <STRUC_OLD>.
+        LV_TABNAME = 'EKET'.
+        CONCATENATE SY-MANDT LV_EBELN LV_EBELP LV_ETENR INTO LV_TABKEY.
+      ENDIF.
+    ENDIF.
+
+* CDPOS keys
+    IF <STRUC_NEW> IS NOT ASSIGNED.
+      "Table Name
+      LV_TABNAME = 'EINKBELEG'.
+      "Table Key
+      CASE I_STRUC_TYPE.
+        WHEN GC_STRUC_TYPE_HEADER.
+          LV_TABKEY = LV_EBELN.
+        WHEN GC_STRUC_TYPE_ITEM.
+          CONCATENATE LV_EBELN LV_EBELP INTO LV_TABKEY.
+      ENDCASE.
+    ENDIF.
+    "Field Name
+    LV_FNAME = LW_FIELDS_COMP-FIELDNAME.
+    CASE LW_FIELDS_COMP-FIELDNAME.
+      WHEN 'ZSVF_POHTXT' OR 'ZSVF_RMKTXT'.
+        LV_FNAME = 'F01 1'.
+    ENDCASE.
+
+* Compare current data with database
+    IF <STRUC_NEW> IS ASSIGNED AND <STRUC_OLD> IS ASSIGNED.
+      UNASSIGN: <FLD_NEW>, <FLD_OLD>.
+      ASSIGN COMPONENT LW_FIELDS_COMP-FIELDNAME
+                       OF STRUCTURE <STRUC_NEW> TO <FLD_NEW>.
+      ASSIGN COMPONENT LW_FIELDS_COMP-FIELDNAME
+                       OF STRUCTURE <STRUC_OLD> TO <FLD_OLD>.
+      IF <FLD_NEW> IS ASSIGNED AND <FLD_OLD> IS ASSIGNED
+        AND <FLD_NEW> <> <FLD_OLD>.
+        LV_CHANGE_IND+LV_TABIX(1) = 'X'.
+      ENDIF.
+    ENDIF. "IF <STRUC_OLD> IS ASSIGNED.
+
+* Check Change Document
+    READ TABLE LT_CDPOS INTO LW_CDPOS
+                        WITH KEY TABNAME = LV_TABNAME
+                                 TABKEY = LV_TABKEY
+                                 FNAME = LV_FNAME.
+    IF SY-SUBRC = 0.
+      LV_CHANGE_IND+LV_TABIX(1) = 'X'.
+    ENDIF.
+
+    IF LV_CHANGE_IND+LV_TABIX(1) = 'X'.
+      CASE LW_FIELDS_COMP-FIELDNAME.
+        WHEN 'NETPR' "##
+          OR 'PEINH' "#
+          OR 'BPRME'. "####
+          LV_IND_ZSVF_NETPR = 'X'. "##/####
+          LV_IND_NETWR = 'X'. "#####
+          LV_IND_BRTWR = 'X'. "####
+        WHEN 'MWSKZ'. "##
+          LV_IND_BRTWR = 'X'.
+        WHEN 'MEINS'. "##
+          LV_IND_MENGE = 'X'.
+          LV_IND_NETWR = 'X'. "#####
+          LV_IND_BRTWR = 'X'. "####
+      ENDCASE.
+    ENDIF.
+  ENDLOOP. "LOOP AT LT_DFIES_TAB
+
+  DEFINE MACRO_SET_CHANGE_INDICATOR.
+    IF &2 = 'X'.
+      READ TABLE LT_FIELDS_COMP INTO LW_FIELDS_COMP
+                                WITH KEY FIELDNAME = &1.
+      IF SY-SUBRC = 0.
+        LV_TABIX = SY-TABIX - 1.
+        LV_CHANGE_IND+LV_TABIX(1) = 'X'.
+      ENDIF.
+    ENDIF.
+  END-OF-DEFINITION.
+  MACRO_SET_CHANGE_INDICATOR 'ZSVF_NETPR' LV_IND_ZSVF_NETPR.
+  MACRO_SET_CHANGE_INDICATOR 'NETWR' LV_IND_NETWR.
+  MACRO_SET_CHANGE_INDICATOR 'BRTWR' LV_IND_BRTWR.
+  MACRO_SET_CHANGE_INDICATOR 'MENGE' LV_IND_MENGE.
+
+  CASE I_STRUC_TYPE.
+    WHEN GC_STRUC_TYPE_HEADER.
+      O_PO_CHANGES_KOM-EBELN = I_EKKO-EBELN.
+      O_PO_CHANGES_KOM-ZSVF_CHAGEID_H = LV_CHANGE_IND.
+    WHEN GC_STRUC_TYPE_ITEM.
+      O_PO_CHANGES_KOM-EBELN = I_EKPO-EBELN.
+      O_PO_CHANGES_KOM-EBELP = I_EKPO-EBELP.
+      O_PO_CHANGES_KOM-ZSVF_CHAGEID_I = LV_CHANGE_IND.
+  ENDCASE.
+
+ENDFUNCTION.

@@ -1,0 +1,30 @@
+*&---------------------------------------------------------------------*
+*&  Include           ZSVF0090_I01
+*&---------------------------------------------------------------------*
+*----------------------------------------------------------------------*
+* Data definition
+*----------------------------------------------------------------------*
+* Construct data
+  DATA: LW_LFA1       TYPE LFA1,            "Vendor Info
+        LV_NAME1      TYPE ADDR1_VAL-NAME1, "Vendor Name
+        LV_ID_NAME_ZH TYPE ZSVF_BUYER,      "User ID and Full Name
+        LV_ZSVF_GRSPR TYPE ZSVF_GRSPR,      "####
+        LV_ITEM_TOTAL TYPE EKKO-LPONR.      "Total Item Number
+
+* Decide Printer
+  DATA: LV_ERNAM TYPE EBAN-ERNAM.
+
+* Company Information
+  DATA: LV_BUTXT      TYPE ZSVF_BUTXT,
+        LV_ZSVF_CCPIC TYPE ZSVF_CCPIC,
+        LV_STREET     TYPE ZSVF_CCADS. "AD_STR_OLD. changed on 2015-02-13
+
+* For choosing language of PO for SVF ouptut.
+  DATA: LV_PO_LANG  TYPE SPRAS, "Vendor language = PO language
+        LV_SVF_LANG TYPE SPRAS. "SVF output language
+
+* Others
+  DATA: LV_STRING       TYPE STRING,
+        LV_SUBRC        TYPE SY-SUBRC,
+        LV_ZEBELN_SPOOL TYPE STRING,     "2015-04-22
+        LV_ADRNR        TYPE ADRNR.      "2015-04-23

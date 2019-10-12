@@ -1,0 +1,120 @@
+*&---------------------------------------------------------------------*
+*&  ##                ZSVF0010_TOP
+*&---------------------------------------------------------------------*
+
+TYPE-POOLS: CO,
+            COPRN.
+
+TABLES: TDUMMY,
+        T496Z,
+        T496K,
+        TLINE,
+        THEAD,
+        STXH,
+        MTCOM,
+        MSFCV,
+        MTCOR,
+        MC29S,
+        RCR01,
+        SFCMATDR,
+        SFC_ITKY,
+        SFC_CONF,
+        TTL_ACTIV,
+        SFCTTL_ACT,
+        VMNRPLANT,
+        PPPRCOLORD,
+        PRINT_CO,
+        PSFC_COMP,
+        PSFC_HEAD,
+        COBL,
+        AFFLD,
+        AFVGD,
+        AFFHD,
+        AFPOD,
+        CAUFVD,
+        RESBD,
+        KBEDP.
+
+* Tabelle der Tabellen für Tabellenzugriffe
+DATA: BEGIN OF X_TABLE_TAB OCCURS 10,
+        NAME LIKE T496Z-TABNM,
+      END   OF X_TABLE_TAB.
+
+* Tabelle der Tabellenzugriffe
+DATA: X_T496Z_TAB LIKE T496Z OCCURS 0 WITH HEADER LINE.
+
+* Tabelle der Aufträge
+DATA: CAUFVD_TAB    LIKE CAUFVD OCCURS 0 WITH HEADER LINE,
+      GW_CAUFVD_TAB TYPE CAUFVD.
+
+* Tabelle der Positionen
+DATA: AFPOD_TAB    LIKE AFPOD OCCURS 0 WITH HEADER LINE,
+      GW_AFPOD_TAB TYPE AFPOD.
+
+* Tabelle der Vorgänge
+DATA: AFVGD_TAB LIKE AFVGD OCCURS 0 WITH HEADER LINE.
+* Tabelle der Folgen
+DATA: AFFLD_TAB LIKE AFFLD OCCURS 0 WITH HEADER LINE.
+
+* Tabelle der Komponenten
+DATA: RESBD_TAB    LIKE RESBD OCCURS 0 WITH HEADER LINE,
+      GW_RESBD_TAB TYPE RESBD.
+
+* Tabelle der FHM's
+DATA: AFFHD_TAB LIKE AFFHD OCCURS 0 WITH HEADER LINE.
+* Tabelle der Arbeitsplätze
+DATA: WORK_TAB TYPE CO_RCR01_TAB WITH HEADER LINE.
+* Tabelle der Komponenten
+DATA: COMP_TAB LIKE RESBD OCCURS 0 WITH HEADER LINE.
+* Tabelle der FHM's
+DATA: FHM_TAB LIKE AFFHD OCCURS 0 WITH HEADER LINE.
+DATA: CHARAC_TAB TYPE CO_SFC_CONF_TAB WITH HEADER LINE.
+DATA: TTL_TAB TYPE CO_SFCTTL_ACT_TAB WITH HEADER LINE.
+* Table of document links
+DATA: AFDLD_TAB TYPE CO_AFDLD_TAB WITH HEADER LINE.
+* Objekttabelle
+DATA: ITAB LIKE SFC_ITAB OCCURS 0 WITH HEADER LINE.
+* Tabelle der Objekte bei Teildruck
+DATA: ITAB_TDR LIKE SFC_ITAB OCCURS 0 WITH HEADER LINE.
+* Tabelle der Materialstämme
+DATA: MV_TAB TYPE CO_SFCMATDR_TAB WITH HEADER LINE.
+* Tabelle der Vorgangssplits
+DATA: KBEDP_TAB TYPE CO_KBEDP_TAB WITH HEADER LINE.
+* Tabelle der Stüli-Unterpositionen
+DATA: STPUB LIKE STPUB OCCURS 0 WITH HEADER LINE.
+* Tabelle der Auftragsnetzinfos
+DATA: COLORD_TAB TYPE CO_PPPRCOLORD_TAB WITH HEADER LINE.
+* Tabelle der Serialnummern
+DATA: SEROB_TAB TYPE  CO_RSEROB_TAB WITH HEADER LINE.
+
+* Tabelle der angesprochenen Drucker
+DATA: BEGIN OF DESTINATION_TAB OCCURS 0,
+        DEST LIKE T496P-DRDEST,
+      END OF DESTINATION_TAB.
+
+DATA: GV_PDDEPT    TYPE ZSVF_PDDEPT,
+      GV_PDLINE    TYPE ZSVF_PDLINE,
+      GT_ZSVF002   TYPE TABLE OF ZSVF002,
+      GW_ZSVF002   TYPE ZSVF002,
+      GT_ZSVF003   TYPE TABLE OF ZSVF003,
+      GW_ZSVF003   TYPE ZSVF003,
+      GT_PRINT_KEY TYPE TABLE OF ZSVF001_KEY,
+      GW_PRINT_KEY TYPE ZSVF001_KEY.
+
+DATA: GT_ZSVF005_KOM TYPE TABLE OF ZSVF005_KOM,
+      GW_ZSVF005_KOM TYPE ZSVF005_KOM,
+      GT_ZSVF005     TYPE TABLE OF ZSVF005,
+      GW_ZSVF005     TYPE ZSVF005,
+      GT_MAKT        TYPE TABLE OF MAKT,
+      GW_MAKT        TYPE MAKT.
+
+DATA: GV_BUKRS         TYPE  BUKRS,
+      GV_BUTXT         TYPE  ZSVF_BUTXT,
+      GV_ZSVF_CCPIC    TYPE  ZSVF_CCPIC,
+      GV_STREET        TYPE  ZSVF_CCADS, "changed on 2015-02-13
+      GV_DOC_TYPE_DESC TYPE ZSVF_DOC_TYPE_DESC,
+      GV_DEPT_NAME     TYPE ZSVF014-ZSVF_DEPT_NAME. "Department ID
+
+DATA: GV_LOCKED              TYPE C,
+      GV_PRINT_ERROR         TYPE C,
+      GV_PRINT_EXCEPTION(50) TYPE C.

@@ -1,0 +1,17 @@
+FUNCTION Z_SVF_GET_MAIL_SENDER.
+*"----------------------------------------------------------------------
+*"*"Local Interface:
+*"  EXPORTING
+*"     VALUE(O_ZSVF_MAILSDR) TYPE  ZSVF_MAILSDR
+*"----------------------------------------------------------------------
+  DATA: LW_ZSVF019 TYPE ZSVF019.
+
+  SELECT SINGLE * FROM ZSVF019
+    INTO LW_ZSVF019
+    WHERE ZSVF_SDRID = 'DCC'.
+
+  IF SY-SUBRC = 0.
+    O_ZSVF_MAILSDR = LW_ZSVF019-ZSVF_MAILSDR.
+  ENDIF.
+
+ENDFUNCTION.

@@ -1,0 +1,47 @@
+*----------------------------------------------------------------------*
+***INCLUDE LMEDRUCKF1S .
+*----------------------------------------------------------------------*
+*&---------------------------------------------------------------------*
+*&      Form  ALTE_DATEN_ERMITTELN
+*&---------------------------------------------------------------------*
+*      xaend MUSS die Änderungen in zeitlicher Reihenfolge enthalten
+*----------------------------------------------------------------------*
+*      -->P_XAEND  text
+*      <--P_HEKET  text
+*      <--P_RETCO  text
+*----------------------------------------------------------------------*
+FORM alte_daten_ermitteln TABLES lt_xaend STRUCTURE xaend
+                          CHANGING l_heket LIKE heket p_belex.
+
+  CLEAR p_belex.
+* prüfen, ob Einteilung neu: wenn ja dann fertig
+  LOOP AT lt_xaend INTO xaend WHERE tabname EQ 'EKET'
+                              AND ebelp EQ heket-ebelp
+                              AND etenr EQ heket-etenr
+                              AND chngind  EQ 'I'.
+    EXIT.
+  ENDLOOP.
+  IF sy-subrc EQ 0.
+    EXIT.
+  ENDIF.
+* falls geändert, dann alten Stand ermitteln
+  LOOP AT lt_xaend INTO xaend WHERE tabname EQ 'EKET'
+                              AND ebelp EQ heket-ebelp
+                              AND etenr EQ heket-etenr
+                           AND ( fname EQ 'UZEIT' OR fname EQ 'LPEIN' )
+                              AND chngind  EQ 'U'.
+
+    IF xaend-fname = 'UZEIT' AND heket-tflag IS INITIAL.
+      REPLACE ':' WITH ' ' INTO xaend-f_old.
+      REPLACE ':' WITH ' ' INTO xaend-f_old.
+      CONDENSE xaend-f_old NO-GAPS.
+      heket-uzeit = xaend-f_old.
+      heket-tflag = 'X'.
+    ELSEIF xaend-fname = 'LPEIN' AND heket-lpein IS INITIAL.
+      heket-lpein = xaend-f_old.
+    ENDIF.
+  ENDLOOP.
+  IF sy-subrc EQ 0.
+    p_belex = 'X'.
+  ENDIF.
+ENDFORM.                    " ALTE_DATEN_ERMITTELN

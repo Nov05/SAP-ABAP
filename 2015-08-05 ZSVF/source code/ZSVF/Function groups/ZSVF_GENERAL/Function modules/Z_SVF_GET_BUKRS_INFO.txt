@@ -1,0 +1,146 @@
+FUNCTION Z_SVF_GET_BUKRS_INFO.
+*"----------------------------------------------------------------------
+*"*"Local Interface:
+*"  IMPORTING
+*"     VALUE(I_DOC_TYPE) TYPE  ZSVF_DOC_TYPE
+*"     VALUE(I_WERKS) TYPE  WERKS_D OPTIONAL
+*"     VALUE(I_BUKRS) TYPE  BUKRS OPTIONAL
+*"     VALUE(I_SPRAS) TYPE  SPRAS DEFAULT SY-LANGU
+*"  EXPORTING
+*"     VALUE(O_BUKRS) TYPE  BUKRS
+*"     VALUE(O_BUTXT) TYPE  ZSVF_BUTXT
+*"     VALUE(O_ZSVF_CCPIC) TYPE  ZSVF_CCPIC
+*"     VALUE(O_STREET) TYPE  ZSVF_CCADS
+*"----------------------------------------------------------------------
+* Change Log:
+* 2014-10-09 This function module is created by Arwen.
+*-----------------------------------------------------------------------
+  DATA: LW_ZSVF017             TYPE ZSVF017,
+        LW_COMPANYCODE_ADDRESS TYPE BAPI0002_3,
+        LV_SPRAS               TYPE SPRAS,
+        LV_BUKRS               TYPE BUKRS,
+        LV_DELADS              TYPE ZSVF_DLVADS.
+
+* Function ADDR_GET
+  DATA:
+* Importing
+    LW_ADDRESS_SELECTION TYPE ADDR1_SEL,
+*    LW_ADDRESS_GROUP           TYPE ADRG-ADDR_GROUP,
+*    LW_READ_SADR_ONLY          TYPE SZAD_FIELD-FLAG,
+*    LW_READ_TEXTS              TYPE SZAD_FIELD-FLAG,
+*    LW_IV_CURRENT_COMM_DATA    TYPE AD_COMCURR,
+*    LW_BLK_EXCPT               TYPE AD_BLKFLAG,
+* Exporting
+    LW_ADDRESS_VALUE     TYPE ADDR1_VAL,
+*    LW_ADDRESS_ADDITIONAL_INFO TYPE AD1_FLAGS,
+*    LW_RETURNCODE              TYPE SZAD_FIELD-RETURNCODE,
+*    LW_ADDRESS_TEXT            TYPE ADDR1_TEXT,
+    LW_SADR              TYPE SADR.
+
+  CHECK I_WERKS IS NOT INITIAL OR I_BUKRS IS NOT INITIAL.
+
+* #####################
+  IF I_BUKRS IS NOT INITIAL.
+    LV_BUKRS = I_BUKRS.
+  ELSE.
+    CALL FUNCTION 'HRCA_PLANT_GET_COMPANYCODE'
+      EXPORTING
+        PLANT                 = I_WERKS
+      IMPORTING
+        COMPANYCODE           = LV_BUKRS
+      EXCEPTIONS
+        NO_COMPANY_CODE_FOUND = 1
+        PLANT_NOT_FOUND       = 2
+        OTHERS                = 3.
+  ENDIF.
+
+  O_BUKRS = LV_BUKRS.
+  CHECK O_BUKRS IS NOT INITIAL.
+
+* ###################
+  IF I_DOC_TYPE = GC_DOC_TYPE_PURO.
+* 2015-02-26 #################
+    SELECT SINGLE * FROM ZSVF017 INTO LW_ZSVF017
+      WHERE ZSVF_DOC_TYPE = I_DOC_TYPE
+      AND BUKRS = O_BUKRS
+      AND SPRAS = I_SPRAS.
+  ELSE.
+    SELECT SINGLE * FROM ZSVF017 INTO LW_ZSVF017
+      WHERE ZSVF_DOC_TYPE = I_DOC_TYPE
+      AND BUKRS = O_BUKRS.
+  ENDIF.
+
+* Company Name
+  O_BUTXT = LW_ZSVF017-BUTXT.
+  IF O_BUTXT IS INITIAL.
+    SELECT SINGLE BUTXT FROM T001
+      INTO (O_BUTXT)
+      WHERE BUKRS = O_BUKRS.
+  ENDIF.
+
+* Company Logo
+  O_ZSVF_CCPIC = LW_ZSVF017-ZSVF_CCPIC.
+
+* Company Address, 2015-02-13
+  O_STREET = LW_ZSVF017-ZSVF_CCADS.
+  IF O_STREET IS INITIAL.
+* Begin of change on 2015-05-14
+* Change: Company address: street -> concatenate 4 fields
+*    CALL FUNCTION 'BAPI_COMPANYCODE_GETDETAIL'
+*      EXPORTING
+*        COMPANYCODEID       = O_BUKRS
+*      IMPORTING
+**       COMPANYCODE_DETAIL  =
+*        COMPANYCODE_ADDRESS = LW_COMPANYCODE_ADDRESS
+**       RETURN              = LV_RETURN
+*      .
+*    O_STREET = LW_COMPANYCODE_ADDRESS-STREET.
+
+    SELECT SINGLE ADRNR INTO (LW_ADDRESS_SELECTION-ADDRNUMBER)
+      FROM T001
+      WHERE BUKRS = O_BUKRS.
+
+    IF SY-SUBRC = 0.
+      CALL FUNCTION 'ADDR_GET'
+        EXPORTING
+          ADDRESS_SELECTION = LW_ADDRESS_SELECTION
+*         ADDRESS_GROUP     =
+*         READ_SADR_ONLY    = ' '
+*         READ_TEXTS        = ' '
+*         IV_CURRENT_COMM_DATA          = ' '
+*         BLK_EXCPT         =
+        IMPORTING
+          ADDRESS_VALUE     = LW_ADDRESS_VALUE
+*         ADDRESS_ADDITIONAL_INFO       =
+*         RETURNCODE        =
+*         ADDRESS_TEXT      =
+          SADR              = LW_SADR
+* TABLES
+*         ADDRESS_GROUPS    =
+*         ERROR_TABLE       =
+*         VERSIONS          =
+        EXCEPTIONS
+          PARAMETER_ERROR   = 1
+          ADDRESS_NOT_EXIST = 2
+          VERSION_NOT_EXIST = 3
+          INTERNAL_ERROR    = 4
+          ADDRESS_BLOCKED   = 5
+          OTHERS            = 6.
+
+      IF SY-SUBRC = 0.
+        CALL FUNCTION 'Z_SVF_GET_ADDR_DAIKIN_FORMAT'
+          EXPORTING
+            I_LANGU      = I_SPRAS
+            I_CITY1      = LW_ADDRESS_VALUE-CITY1
+            I_STREET     = LW_ADDRESS_VALUE-STREET
+            I_CITY2      = LW_ADDRESS_VALUE-CITY2
+            I_STR_SUPPL1 = LW_ADDRESS_VALUE-STR_SUPPL1
+          IMPORTING
+            O_DELADS     = LV_DELADS.
+        O_STREET = LV_DELADS.
+      ENDIF. "if call function addr_get, sy-subrc = 0
+    ENDIF. "if select from t001, sy-subrc = 0
+* End of change on 2015-05-14
+  ENDIF. "IF O_STREET IS INITIAL.
+
+ENDFUNCTION.

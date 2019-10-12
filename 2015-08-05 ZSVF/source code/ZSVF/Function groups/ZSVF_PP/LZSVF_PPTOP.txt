@@ -1,0 +1,3 @@
+FUNCTION-POOL ZSVF_PP.                      "MESSAGE-ID ..
+
+* INCLUDE LZSVF_PPD...                       " Local class definition

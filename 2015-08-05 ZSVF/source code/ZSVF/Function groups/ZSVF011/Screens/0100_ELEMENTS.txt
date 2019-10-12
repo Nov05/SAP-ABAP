@@ -1,0 +1,106 @@
+TCTRL_ZSVF011	
+VIM_FRAME_FIELD	____________________________________________________________
+*ZSVF011-EBELN	Purchasing Doc.
+*ZSVF011-EBELP	Item
+*ZSVF011-ZSVF_DOC_ID	Copy ID
+*ZSVF011-BUKRS	CoCd
+*ZSVF011-SPRAS	Language
+*ZSVF011-BSART	OTyp
+*ZSVF011-LIFNR	Vendor
+*ZSVF011-EKORG	POrg
+*ZSVF011-ZTERM	PayT
+*ZSVF011-WAERS	Crcy
+*ZSVF011-BUTXT	Company Name
+*ZSVF011-LOEKZ	DI
+*ZSVF011-MATNR	Material
+*ZSVF011-TXZ01	Short Text
+*ZSVF011-WERKS	Plnt
+*ZSVF011-LGORT	SLoc
+*ZSVF011-MENGE	Quantity
+*ZSVF011-MEINS	BUn
+*ZSVF011-SAKTO	G/L Account
+*ZSVF011-KOSTL	Cost Center
+*ZSVF011-AUFNR	Order
+*ZSVF011-NETPR	Net Price
+*ZSVF011-PEINH	Price Unit
+*ZSVF011-NETWR	Net Order Value
+*ZSVF011-BRTWR	Gross order value
+*ZSVF011-GSWRT	Total Value
+*ZSVF011-EINDT	Del. Date
+*ZSVF011-BEDNR	Tracking Number
+*ZSVF011-MWSKZ	Tx
+*ZSVF011-BANFN	Purchase Req.
+*ZSVF011-BNFPO	Item
+*ZSVF011-BEDAT	Purchase Order Date
+*ZSVF011-ERNAM	Created by
+*ZSVF011-AFNAM	Requisitioner
+*ZSVF011-ZEBELN	PO/Item Number
+*ZSVF011-ZBANFN	Purchase Req.
+*ZSVF011-ZSVF_SPRAS	Form Langu
+*ZSVF011-ZSVF_VNAME	Vendor Name
+*ZSVF011-ZSVF_CCPIC	Company Picture Name
+*ZSVF011-ZSVF_CCADS	Company Address
+*ZSVF011-ZSVF_PROWR	Gross Price
+*ZSVF011-ZSVF_BUYER	Buyer
+*ZSVF011-LOG_REPID	Program Name
+*ZSVF011-LOG_UNAME	User Name
+*ZSVF011-LOG_DATUM	Date
+*ZSVF011-LOG_UZEIT	Time
+*ZSVF011-LOG_REPID_CHG	Program Name
+*ZSVF011-LOG_UNAME_CHG	User Name
+*ZSVF011-LOG_DATUM_CHG	Date
+*ZSVF011-LOG_UZEIT_CHG	Time
+VIM_MARKED	_
+ZSVF011-EBELN	__________
+ZSVF011-EBELP	_____
+ZSVF011-ZSVF_DOC_ID	____
+ZSVF011-BUKRS	____
+ZSVF011-SPRAS	__
+ZSVF011-BSART	____
+ZSVF011-LIFNR	__________
+ZSVF011-EKORG	____
+ZSVF011-ZTERM	____
+ZSVF011-WAERS	_____
+ZSVF011-BUTXT	_________________________
+ZSVF011-LOEKZ	_
+ZSVF011-MATNR	__________________
+ZSVF011-TXZ01	________________________________________
+ZSVF011-WERKS	____
+ZSVF011-LGORT	____
+ZSVF011-MENGE	_________________
+ZSVF011-MEINS	___
+ZSVF011-SAKTO	__________
+ZSVF011-KOSTL	__________
+ZSVF011-AUFNR	____________
+ZSVF011-NETPR	______________
+ZSVF011-PEINH	______
+ZSVF011-NETWR	________________
+ZSVF011-BRTWR	________________
+ZSVF011-GSWRT	________________
+ZSVF011-EINDT	__________
+ZSVF011-BEDNR	__________
+ZSVF011-MWSKZ	__
+ZSVF011-BANFN	__________
+ZSVF011-BNFPO	_____
+ZSVF011-BEDAT	__________
+ZSVF011-ERNAM	____________
+ZSVF011-AFNAM	____________
+ZSVF011-ZEBELN	________________
+ZSVF011-ZBANFN	__________
+ZSVF011-ZSVF_SPRAS	__
+ZSVF011-ZSVF_VNAME	________________________________________
+ZSVF011-ZSVF_CCPIC	____________________________________________________________________________________________________________________________________
+ZSVF011-ZSVF_CCADS	____________________________________________________________________________________________________
+ZSVF011-ZSVF_PROWR	____________________
+ZSVF011-ZSVF_BUYER	_____________________________________________________________________________________________
+ZSVF011-LOG_REPID	________________________________________
+ZSVF011-LOG_UNAME	____________
+ZSVF011-LOG_DATUM	__________
+ZSVF011-LOG_UZEIT	________
+ZSVF011-LOG_REPID_CHG	________________________________________
+ZSVF011-LOG_UNAME_CHG	____________
+ZSVF011-LOG_DATUM_CHG	__________
+ZSVF011-LOG_UZEIT_CHG	________
+VIM_POSI_PUSH	____________________
+VIM_POSITION_INFO	______________________________
+OK_CODE	____

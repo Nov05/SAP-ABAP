@@ -1,0 +1,4 @@
+Text-symbols
+001	This item has been cancelled!
+B01	Call
+

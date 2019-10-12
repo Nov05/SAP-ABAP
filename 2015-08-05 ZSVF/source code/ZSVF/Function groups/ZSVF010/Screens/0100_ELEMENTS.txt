@@ -1,0 +1,56 @@
+TCTRL_ZSVF010	
+VIM_FRAME_FIELD	____________________________________________________________
+*ZSVF010-AUFNR	Order
+*ZSVF010-ZSVF_DOC_ID	Copy ID
+*ZSVF010-MATNR	Material
+*ZSVF010-MAKTX	Material Description
+*ZSVF010-WERKS	Plnt
+*ZSVF010-CHARG	Batch
+*ZSVF010-GSTRP	Bas. Start
+*ZSVF010-ZSVF_MATNAM	Material Series
+*ZSVF010-ZSVF_MATLOT	Material Lot Size
+*ZSVF010-ZSVF_LABLTYPE	Label Type
+*ZSVF010-ZSVF_LABLVER	Lbl Ver
+*ZSVF010-HSDAT	Date of Manuf.
+*ZSVF010-ZSVF_BC1_P1	Barcode
+*ZSVF010-ZSVF_BC1_P2	Barcode
+*ZSVF010-ZSVF_LABLQTY	Lbl Quan
+*ZSVF010-ZSVF_PDDEPT	Prod.Dept.
+*ZSVF010-ZSVF_PDLINE	+
+*ZSVF010-LOG_REPID	Program Name
+*ZSVF010-LOG_UNAME	User Name
+*ZSVF010-LOG_DATUM	Date
+*ZSVF010-LOG_UZEIT	Time
+*ZSVF010-LOG_REPID_CHG	Program Name
+*ZSVF010-LOG_UNAME_CHG	User Name
+*ZSVF010-LOG_DATUM_CHG	Date
+*ZSVF010-LOG_UZEIT_CHG	Time
+VIM_MARKED	_
+ZSVF010-AUFNR	____________
+ZSVF010-ZSVF_DOC_ID	____
+ZSVF010-MATNR	__________________
+ZSVF010-MAKTX	________________________________________
+ZSVF010-WERKS	____
+ZSVF010-CHARG	__________
+ZSVF010-GSTRP	__________
+ZSVF010-ZSVF_MATNAM	______________________________
+ZSVF010-ZSVF_MATLOT	______________________________
+ZSVF010-ZSVF_LABLTYPE	__________
+ZSVF010-ZSVF_LABLVER	___
+ZSVF010-HSDAT	__________
+ZSVF010-ZSVF_BC1_P1	____________________________________________________________________________________________________________________________________
+ZSVF010-ZSVF_BC1_P2	____________________________________________________________________________________________________________________________________
+ZSVF010-ZSVF_LABLQTY	_____
+ZSVF010-ZSVF_PDDEPT	__________
+ZSVF010-ZSVF_PDLINE	_
+ZSVF010-LOG_REPID	________________________________________
+ZSVF010-LOG_UNAME	____________
+ZSVF010-LOG_DATUM	__________
+ZSVF010-LOG_UZEIT	________
+ZSVF010-LOG_REPID_CHG	________________________________________
+ZSVF010-LOG_UNAME_CHG	____________
+ZSVF010-LOG_DATUM_CHG	__________
+ZSVF010-LOG_UZEIT_CHG	________
+VIM_POSI_PUSH	____________________
+VIM_POSITION_INFO	______________________________
+OK_CODE	____

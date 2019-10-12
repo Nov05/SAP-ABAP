@@ -1,0 +1,321 @@
+*&---------------------------------------------------------------------*
+*&  Include           ZSVF0090_I03
+*&---------------------------------------------------------------------*
+    CLEAR: GT_PRINT_KEY[],
+           GT_ZSVF005_KOM[],
+           GT_ZSVF011[].
+
+* Print Request Key
+    CLEAR GW_PRINT_KEY.
+    GW_PRINT_KEY-ZSVF_DOC_TYPE = GC_DOC_TYPE_GRPO.
+    GW_PRINT_KEY-ZSVF_DOC_NUM  = GW_DOC-XEKKO-EBELN.
+    GW_PRINT_KEY-ZSVF_DOC_ITEM = GW_XEKPO-EBELP.
+
+* 1. Get printer information
+*   1.1 Decide the printer by configuration
+*   1.2 Decide the printer by user
+* 2. Re-construct data
+* 3. Update document content tables
+*   3.1 Header table ZSVF006
+*   3.2 Item table ZSVF007
+* 4. Update print status table
+
+* Get account assignment data
+    SORT GW_DOC-XEKKN[] BY EBELN EBELP ZEKKN.
+    CLEAR GW_XEKKN.
+    READ TABLE GW_DOC-XEKKN INTO GW_XEKKN
+                            WITH KEY EBELN = GW_XEKPO-EBELN
+                                     EBELP = GW_XEKPO-EBELP.
+
+* Get schedule line data
+    CLEAR GW_XEKET.
+    READ TABLE GW_DOC-XEKET INTO GW_XEKET
+                            WITH KEY EBELN = GW_XEKPO-EBELN
+                                     EBELP = GW_XEKPO-EBELP.
+
+    CLEAR GW_EBAN.
+    SELECT SINGLE * INTO GW_EBAN
+      FROM EBAN
+      WHERE BANFN = GW_XEKPO-BANFN
+      AND BNFPO = GW_XEKPO-BNFPO.
+* Get purchase requisition creator
+    LV_ERNAM = GW_EBAN-ERNAM.
+
+* 2015-02-16 Add storage location
+    CALL FUNCTION 'Z_SVF_GET_PRINT_INFO'
+      EXPORTING
+        I_PRINT_KEY           = GW_PRINT_KEY
+        I_BUKRS               = GW_DOC-XEKKO-BUKRS
+*       I_PDDEPT              = GV_PDDEPT
+*       I_PDLINE              = GV_PDLINE
+        I_SLOC                = GW_XEKPO-LGORT "Added on 2015-02-16
+        I_PURGP               = GW_DOC-XEKKO-EKGRP
+        I_PRCRID              = LV_ERNAM
+      TABLES
+        OT_ZSVF005            = GT_ZSVF005
+      EXCEPTIONS
+        NO_PRINT_CONFIG_FOUND = 1
+        NO_PRINTER_FOUND      = 2
+        OTHERS                = 3.
+
+    IF SY-SUBRC <> 0.
+      MACRO_PRINT_FAILED.
+    ENDIF.
+
+* Lock Doc ID of table ZSVF001
+    CALL FUNCTION 'Z_SVF_COPYID_ENQUEUE'
+      EXPORTING
+        I_DOC_TYPE             = GW_PRINT_KEY-ZSVF_DOC_TYPE
+        I_DOC_NUM              = GW_PRINT_KEY-ZSVF_DOC_NUM
+        I_DOC_ITEM             = GW_PRINT_KEY-ZSVF_DOC_ITEM
+      EXCEPTIONS
+        ENQUEUE_DOC_ID_FAILURE = 1
+        OTHERS                 = 2.
+    IF SY-SUBRC <> 0.
+      MACRO_PRINT_FAILED.
+    ENDIF.
+
+* Get Doc ID
+    CALL FUNCTION 'Z_SVF_COPYID_GET_NEXT'
+      EXPORTING
+        I_DOC_TYPE = GW_PRINT_KEY-ZSVF_DOC_TYPE
+        I_DOC_NUM  = GW_PRINT_KEY-ZSVF_DOC_NUM
+        I_DOC_ITEM = GW_PRINT_KEY-ZSVF_DOC_ITEM
+      IMPORTING
+        O_DOC_ID   = GW_PRINT_KEY-ZSVF_DOC_ID.
+
+* Fill internal table of ZSVF011
+    CLEAR GW_ZSVF011.
+    MOVE-CORRESPONDING GW_DOC-XEKKO TO GW_ZSVF011.
+    MOVE-CORRESPONDING GW_XEKPO TO GW_ZSVF011.
+    GW_ZSVF011-ZSVF_DOC_ID = GW_PRINT_KEY-ZSVF_DOC_ID.
+
+* Language
+    GW_ZSVF011-ZSVF_SPRAS = LV_SVF_LANG.
+* Vendor Info
+    GW_ZSVF011-ZSVF_VNAME = LV_NAME1. "Vendor Name
+* Account assignment
+    GW_ZSVF011-SAKTO = GW_XEKKN-SAKTO.
+    GW_ZSVF011-KOSTL = GW_XEKKN-KOSTL.
+    GW_ZSVF011-AUFNR = GW_XEKKN-AUFNR.
+* Schedule Line
+    GW_ZSVF011-EINDT = GW_XEKET-EINDT.
+
+* Gross price ####
+* Changed on 2015-02-16
+*    GW_ZSVF011-ZSVF_PROWR = ( '1.0' + LV_TAX_RATE )
+*                            * GW_XEKPO-NETWR.
+    CALL FUNCTION 'Z_SVF_GET_GROSS_VALUE'
+      EXPORTING
+        I_PRINT_KEY         = GW_PRINT_KEY
+        I_BUKRS             = GW_XEKPO-BUKRS
+        I_MWSKZ             = GW_XEKPO-MWSKZ
+        I_MENGE             = GW_ZSVF011-MENGE
+        I_PEINH             = GW_ZSVF011-PEINH
+        I_NETPR             = GW_ZSVF011-NETPR
+        I_NETWR             = GW_ZSVF011-NETWR
+        I_BRTWR             = GW_ZSVF011-BRTWR
+      IMPORTING
+        O_ZSVF_GRSPR        = LV_ZSVF_GRSPR
+      EXCEPTIONS
+        ARITHMETIC_OVERFLOW = 1
+        OTHERS              = 2.
+    IF SY-SUBRC = 0.
+      GW_ZSVF011-ZSVF_PROWR = LV_ZSVF_GRSPR.
+    ENDIF.
+
+* Get PO creator ID and full name
+* Added on 2015-03-15
+    CALL FUNCTION 'Z_SVF_GET_USER_NAME'
+      EXPORTING
+        I_USRID      = GW_ZSVF011-ERNAM
+      IMPORTING
+*       O_NAME_TEXT  =
+*       O_FULL_NAME_ZH       =
+        O_ID_NAME_ZH = LV_ID_NAME_ZH.
+    GW_ZSVF011-ZSVF_BUYER = LV_ID_NAME_ZH.
+
+* 2015-02-28 Delete: PO number/Item Number
+* Po Number/Total-Item, e.g.3000077729/1-3
+    "PO Number
+    GW_ZSVF011-ZEBELN = GW_ZSVF011-EBELN.
+    SHIFT GW_ZSVF011-ZEBELN LEFT DELETING LEADING '0'.
+
+    "Total Item Number
+    "---for spool name
+    CONCATENATE GW_ZSVF011-ZEBELN '/' LV_ITEM_TOTAL
+                INTO LV_ZEBELN_SPOOL.
+    "---for history table
+    LV_STRING = LV_ITEM_TOTAL.
+    SHIFT LV_STRING LEFT DELETING LEADING '0'.
+    CONCATENATE GW_ZSVF011-ZEBELN '/' LV_STRING
+                INTO GW_ZSVF011-ZEBELN.
+
+    "Item Number
+    "---for spool name
+    CONCATENATE LV_ZEBELN_SPOOL '-' GW_ZSVF011-EBELP
+                INTO LV_ZEBELN_SPOOL.
+    "---for history table
+    LV_STRING = GW_ZSVF011-EBELP.
+    SHIFT LV_STRING LEFT DELETING LEADING '0'.
+    CONCATENATE GW_ZSVF011-ZEBELN '-' LV_STRING
+                INTO GW_ZSVF011-ZEBELN.
+
+    GW_ZSVF011-ZBANFN = GW_XEKPO-BANFN.
+
+* Company Info
+    GW_ZSVF011-BUTXT = LV_BUTXT.
+    GW_ZSVF011-ZSVF_CCADS = LV_STREET. "Company address
+    GW_ZSVF011-ZSVF_CCPIC = LV_ZSVF_CCPIC.
+
+* Get #####
+* 2015-04-23 Bug fix
+    GW_ZSVF011-GSWRT = GW_EBAN-PREIS * GW_EBAN-MENGE / GW_EBAN-PEINH.
+
+    "Convert currency amount display
+    PERFORM FRM_CURRENCY_AMOUNT_TO_DISPLAY(ZSVF0070)
+            USING GW_EBAN-WAERS
+            CHANGING GW_ZSVF011-GSWRT.     "#####
+    PERFORM FRM_CURRENCY_AMOUNT_TO_DISPLAY(ZSVF0070)
+          USING GW_ZSVF011-WAERS
+          CHANGING GW_ZSVF011-NETWR.       "#####
+    PERFORM FRM_CURRENCY_AMOUNT_TO_DISPLAY(ZSVF0070)
+          USING GW_ZSVF011-WAERS
+          CHANGING GW_ZSVF011-ZSVF_PROWR. "####
+
+* Entry log
+    GW_ZSVF011-LOG_REPID = SY-REPID.
+    GW_ZSVF011-LOG_UNAME = SY-UNAME.
+    GW_ZSVF011-LOG_DATUM = SY-DATUM.
+    GW_ZSVF011-LOG_UZEIT = SY-UZEIT.
+    APPEND GW_ZSVF011 TO GT_ZSVF011.
+
+* Get Document Type Description
+    CLEAR GV_DOC_TYPE_DESC.
+    CALL FUNCTION 'Z_SVF_GET_DOC_TYPE_DESC'
+      EXPORTING
+        I_DOC_TYPE      = GW_PRINT_KEY-ZSVF_DOC_TYPE
+        I_LANGU         = '1' "Chinese
+      IMPORTING
+        O_DOC_TYPE_DESC = GV_DOC_TYPE_DESC.
+
+* Get Spool Name
+    LOOP AT GT_ZSVF005 INTO GW_ZSVF005.
+      CLEAR GW_ZSVF005_KOM.
+      MOVE-CORRESPONDING GW_ZSVF005 TO GW_ZSVF005_KOM.
+      GW_ZSVF005_KOM-BUKRS = GW_DOC-XEKKO-BUKRS.
+*&---------------------------------------------------------------------*
+*&  Get SVF Spool Name
+*&---------------------------------------------------------------------*
+** 2015-03-26
+** “###”_[#####]_ V#(####)_1####(#####)_[#####]_[###]_[####]
+** #1####_150302Z001_V2_1_##_CC004610_#####
+** #2####_150302Z001_V1_1_##__#######
+*      MACRO_CONCATENATE_STR:
+*                  GV_DOC_TYPE_DESC         GW_ZSVF005_KOM-ZSVF_SPLNAM, "Doc type
+*                  '_'                      GW_ZSVF005_KOM-ZSVF_SPLNAM,
+*                  GW_ZSVF011-BEDNR         GW_ZSVF005_KOM-ZSVF_SPLNAM, "####
+*                  '_V'                     GW_ZSVF005_KOM-ZSVF_SPLNAM,
+*                  GW_PRINT_KEY-ZSVF_DOC_ID GW_ZSVF005_KOM-ZSVF_SPLNAM, "####
+*                  '_'                      GW_ZSVF005_KOM-ZSVF_SPLNAM,
+*                  GW_ZSVF005-ZSVF_PRT_CONT GW_ZSVF005_KOM-ZSVF_SPLNAM, "##
+*                  '_'                      GW_ZSVF005_KOM-ZSVF_SPLNAM,
+*                  GW_ZSVF011-AFNAM         GW_ZSVF005_KOM-ZSVF_SPLNAM, "#####
+*                  '_'                      GW_ZSVF005_KOM-ZSVF_SPLNAM,
+*                  GW_ZSVF011-MATNR         GW_ZSVF005_KOM-ZSVF_SPLNAM, "###
+*                  '_'                      GW_ZSVF005_KOM-ZSVF_SPLNAM,
+*                  GW_ZSVF011-TXZ01         GW_ZSVF005_KOM-ZSVF_SPLNAM. "####
+
+* 2015-04-09 [###] 150302Z003 v2 ## CC004610 ##### 3000077755
+* 2015-04-14 150302Z003 3000077755/99-99 v2 ## CC004610 #####
+* 2015-04-22 Change 3000077755/99-99 => 3000077755/00099-00099
+      MACRO_CLEAR_STRINGS.
+*      CONCATENATE '[' GV_DOC_TYPE_DESC ']' INTO GV_STR_01. "Doc Type
+      GV_STR_02 = GW_ZSVF011-BEDNR. "####
+      SHIFT GV_STR_02 LEFT DELETING LEADING '0'.
+      GV_STR_03 = LV_ZEBELN_SPOOL. "GW_ZSVF011-ZEBELN. "GW_ZSVF011-EBELN. "#####
+      SHIFT GV_STR_03 LEFT DELETING LEADING '0'.
+      GV_STR_04 = GW_PRINT_KEY-ZSVF_DOC_ID. "#### Version
+      SHIFT GV_STR_04 LEFT DELETING LEADING '0'.
+      CONCATENATE 'v' GV_STR_04 INTO GV_STR_04.
+      GV_STR_05 = GW_ZSVF011-AFNAM. "#####
+      GV_STR_06 = GW_ZSVF011-MATNR. "###
+      SHIFT GV_STR_06 LEFT DELETING LEADING '0'.
+      GV_STR_07 = GW_ZSVF011-TXZ01. "####
+      MACRO_CONCATENATE_STRINGS GW_ZSVF005_KOM-ZSVF_SPLNAM SPACE.
+*----------------------------------------------------------------------*
+* Get SVF Mail Subject
+*----------------------------------------------------------------------*
+* 2015-04-09
+* [###] PO:3000077755_v2 (Tr#150302Z003#
+      MACRO_CLEAR_STRINGS.
+      CONCATENATE '[' GV_DOC_TYPE_DESC ']' INTO GV_STR_01. "Doc Type
+      GV_STR_02 = GW_ZSVF011-EBELN. "#####
+      SHIFT GV_STR_02 LEFT DELETING LEADING '0'.
+      GV_STR_03 = GW_PRINT_KEY-ZSVF_DOC_ID. "#### Version
+      SHIFT GV_STR_03 LEFT DELETING LEADING '0'.
+      CONCATENATE 'PO:' GV_STR_02 '_v' GV_STR_03 INTO GV_STR_02.
+      CLEAR GV_STR_03.
+      GV_STR_03 = GW_ZSVF011-BEDNR. "####
+      SHIFT GV_STR_03 LEFT DELETING LEADING '0'.
+      CONCATENATE '(Tr#' GV_STR_03 ')' INTO GV_STR_03.
+      MACRO_CONCATENATE_STRINGS GW_ZSVF005_KOM-ZSVF_MAILSJT SPACE.
+
+      APPEND GW_ZSVF005_KOM TO GT_ZSVF005_KOM.
+    ENDLOOP. "loop at gt_zsvf005
+
+* Create an entry in status table
+    CALL FUNCTION 'Z_SVF_STATUS_CREATE'
+      EXPORTING
+        ZSVF_DOC_TYPE          = GW_PRINT_KEY-ZSVF_DOC_TYPE
+        ZSVF_DOC_NUM           = GW_PRINT_KEY-ZSVF_DOC_NUM
+        ZSVF_DOC_ITEM          = GW_PRINT_KEY-ZSVF_DOC_ITEM
+        ZSVF_DOC_ID            = GW_PRINT_KEY-ZSVF_DOC_ID
+      TABLES
+        IT_ZSVF005_KOM         = GT_ZSVF005_KOM
+        OT_PRINT_KEY           = GT_PRINT_KEY
+      EXCEPTIONS
+        INPUT_FIELD_IS_INITIAL = 1
+        OTHERS                 = 2.
+    IF SY-SUBRC <> 0.
+*      MESSAGE S998(ZSVF) WITH GW_PRINT_KEY-ZSVF_DOC_NUM
+*                              GW_PRINT_KEY-ZSVF_DOC_ID
+*                         DISPLAY LIKE 'E'. "#### & &
+      MACRO_PRINT_FAILED.
+    ENDIF.
+
+* Update Doc Header and Item tables. Do not commit here.
+* There would be a dump if failed, so no need to log and throw message.
+    INSERT ZSVF011 FROM TABLE GT_ZSVF011.
+
+* Unlock Doc ID of table ZSVF001
+    CALL FUNCTION 'Z_SVF_COPYID_DEQUEUE'
+      EXPORTING
+        I_DOC_TYPE            = GW_PRINT_KEY-ZSVF_DOC_TYPE
+        I_DOC_NUM             = GW_PRINT_KEY-ZSVF_DOC_NUM
+        I_DOC_ITEM            = GW_PRINT_KEY-ZSVF_DOC_ITEM
+      EXCEPTIONS
+        EQUEUE_DOC_ID_FAILURE = 1
+        OTHERS                = 2.
+
+* Update status table
+    LOOP AT GT_PRINT_KEY INTO GW_PRINT_KEY.
+* Lock print keys
+      PERFORM FRM_LOCK_ZSVF001_DATA USING GW_PRINT_KEY
+                                    CHANGING GV_LOCKED.
+      IF GV_LOCKED <> 'X'.
+        MACRO_PRINT_FAILED.
+      ENDIF.
+
+      CALL FUNCTION 'Z_SVF_STATUS_CHANGE'
+        EXPORTING
+          PRINT_KEY            = GW_PRINT_KEY
+          ZSVF_PRTSTAT         = GC_STATUS_A0
+*         ZSVF_CHAGER          = SY-UNAME
+*         ZSVF_CHDDATE         = SY-DATUM
+        EXCEPTIONS
+          PRINT_KEY_INVALID    = 1
+          PRINT_STATUS_INVALID = 2
+          MODIFY_TABLE_ERROR   = 3
+          OTHERS               = 4.
+    ENDLOOP. "LOOP AT GT_PRINT_KEY

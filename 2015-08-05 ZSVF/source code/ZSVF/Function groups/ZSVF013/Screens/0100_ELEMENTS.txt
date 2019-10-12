@@ -1,0 +1,44 @@
+TCTRL_ZSVF013	
+VIM_FRAME_FIELD	____________________________________________________________
+*ZSVF013-GUID	GUID 22
+*ZSVF013-ZSVF_DOC_TYPE	DocT
+*ZSVF013-ZSVF_DOC_NUM	Document Number
+*ZSVF013-ZSVF_DOC_ITEM	Doc. Item
+*ZSVF013-ZSVF_DOC_ID	Copy ID
+*ZSVF013-ZSVF_PRT_NO	Prt.Conf.
+*ZSVF013-ZSVF_LOG_USER	Created by
+*ZSVF013-ZSVF_LOG_DATE	Date
+*ZSVF013-ZSVF_LOG_TIME	Time
+*ZSVF013-TYPE	MsgType
+*ZSVF013-ID	Message Class
+*ZSVF013-MESSAGE_NUMBER	Msg.no.
+*ZSVF013-MESSAGE	Message text
+*ZSVF013-LOG_NO	Log number
+*ZSVF013-LOG_MSG_NO	Msg.no
+*ZSVF013-MESSAGE_V1	Message Variable
+*ZSVF013-MESSAGE_V2	Message Variable
+*ZSVF013-MESSAGE_V3	Message Variable
+*ZSVF013-MESSAGE_V4	Message Variable
+VIM_MARKED	_
+ZSVF013-GUID	______________________
+ZSVF013-ZSVF_DOC_TYPE	____
+ZSVF013-ZSVF_DOC_NUM	__________________
+ZSVF013-ZSVF_DOC_ITEM	______
+ZSVF013-ZSVF_DOC_ID	____
+ZSVF013-ZSVF_PRT_NO	____
+ZSVF013-ZSVF_LOG_USER	____________
+ZSVF013-ZSVF_LOG_DATE	__________
+ZSVF013-ZSVF_LOG_TIME	________
+ZSVF013-TYPE	_
+ZSVF013-ID	____________________
+ZSVF013-MESSAGE_NUMBER	___
+ZSVF013-MESSAGE	____________________________________________________________________________________________________________________________________
+ZSVF013-LOG_NO	____________________
+ZSVF013-LOG_MSG_NO	______
+ZSVF013-MESSAGE_V1	__________________________________________________
+ZSVF013-MESSAGE_V2	__________________________________________________
+ZSVF013-MESSAGE_V3	__________________________________________________
+ZSVF013-MESSAGE_V4	__________________________________________________
+VIM_POSI_PUSH	____________________
+VIM_POSITION_INFO	______________________________
+OK_CODE	____

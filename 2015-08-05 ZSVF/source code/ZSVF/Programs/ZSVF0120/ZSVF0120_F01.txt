@@ -1,0 +1,251 @@
+*&---------------------------------------------------------------------*
+*&  ##                ZSVF0120_F01
+*&---------------------------------------------------------------------*
+FORM FRM_GET_DATA.
+
+  SELECT *
+    FROM ZSVF001
+    INTO TABLE GT_ZSVF001
+    WHERE ZSVF_DOC_TYPE IN SO_DTYP
+      AND ZSVF_DOC_NUM  IN SO_DNUM
+      AND ZSVF_PRTSTAT  IN SO_STAT
+      AND (    ZSVF_PRTSTAT LIKE 'A%'
+            OR ZSVF_PRTSTAT LIKE 'B%'
+            OR ( ZSVF_PRTSTAT LIKE 'C%'               "Send Print Request Failed
+                 AND ZSVF_PRTSTAT <> GC_STATUS_C0 )
+            OR ( ZSVF_PRTSTAT LIKE 'D%'               "SVF Print Failed
+                 AND ZSVF_PRTSTAT <> GC_STATUS_PRINTED ) )
+      AND LOG_DATUM     IN SO_DATE
+*      AND ZSVF_PRTAMT < 10 "Number of tries
+.
+ENDFORM.
+
+FORM FRM_DISPLAY_DATA.
+
+  PERFORM FRM_BUILD_FIELDCAGT.
+  PERFORM FRM_OUTPUT_ALV.
+
+ENDFORM.
+
+FORM FRM_BUILD_FIELDCAGT.
+
+  DATA: GV_SUFFIX TYPE STRING.
+
+  CLEAR: GW_DATA, GT_FIELDCAT[].
+  CALL FUNCTION 'REUSE_ALV_FIELDCATALOG_MERGE'
+    EXPORTING
+      I_PROGRAM_NAME          = SY-REPID
+      I_INTERNAL_TABNAME      = 'GW_DATA'
+*     I_STRUCTURE_NAME        =
+*     I_CLIENgt_NEVER_DISPLAY = 'X'
+      I_INCLNAME              = SY-REPID
+*     I_BYPASSING_BUFFER      =
+*     I_BUFFER_ACTIVE         =
+    CHANGING
+      CT_FIELDCAT             = GT_FIELDCAT
+    EXCEPTIONS
+      INCONSISTENGT_INTERFACE = 1
+      PROGRAM_ERROR           = 2
+      OTHERS                  = 3.
+
+  IF SY-SUBRC <> 0.
+    MESSAGE S000 WITH 'ALV display error' DISPLAY LIKE 'E'.
+    LEAVE LIST-PROCESSING.
+  ENDIF.
+
+ENDFORM.                    "BUILD_FIELDCAT_SUM
+*&---------------------------------------------------------------------*
+*&      Form  OUTPUt_ALV
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+FORM FRM_OUTPUT_ALV.
+
+  GS_LAYOUT-COLWIDTH_OPTIMIZE = 'X'.
+  GS_LAYOUT-ZEBRA = 'X'.
+  GS_LAYOUT-LIGHTS_FIELDNAME = 'LIGHTS'.
+
+  CALL FUNCTION 'REUSE_ALV_GRID_DISPLAY'
+    EXPORTING
+      IT_FIELDCAT        = GT_FIELDCAT "###
+      I_CALLBACK_PROGRAM = SY-REPID
+*     it_sort            = GT_sort
+      I_SAVE             = 'A' " ############
+      IS_LAYOUT          = GS_LAYOUT "####
+      IS_VARIANT         = GS_VARIANT
+    TABLES
+      T_OUTTAB           = GT_DATA.
+
+ENDFORM.                    "OUTPUT_ALV
+*&---------------------------------------------------------------------*
+*&      Form  FRM_INITIALIZATION
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+*  -->  p1        text
+*  <--  p2        text
+*----------------------------------------------------------------------*
+FORM FRM_INITIALIZATION .
+
+  CLEAR: SO_DATE, SO_DATE[].
+  SO_DATE-SIGN = 'I'.
+  SO_DATE-OPTION = 'BT'.
+  SO_DATE-LOW = SY-DATUM - 7.
+  SO_DATE-HIGH = SY-DATUM.
+  APPEND SO_DATE.
+
+  CLEAR: SO_TIME, SO_TIME[].
+  SO_TIME-SIGN = 'I'.
+  SO_TIME-OPTION = 'BT'.
+  SO_TIME-LOW = '000000'.
+  SO_TIME-HIGH = '235959'.
+  APPEND SO_TIME.
+
+ENDFORM.                    " FRM_INITIALIZATION
+*&---------------------------------------------------------------------*
+*&      Form  FRM_PROCESS_DATA
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+*  -->  p1        text
+*  <--  p2        text
+*----------------------------------------------------------------------*
+FORM FRM_PROCESS_DATA .
+
+  LOOP AT GT_ZSVF001 INTO GW_ZSVF001.
+
+    CLEAR: GV_MESSAGE,
+           GT_ZSVF002[],
+           GT_ZSVF003[],
+           GT_ZSVF006[],
+           GT_ZSVF007[],
+           GT_ZSVF008[],
+           GT_ZSVF009[],
+           GT_ZSVF010[],
+           GT_ZSVF011[].
+
+* Get print request key
+    CLEAR GW_PRINT_KEY.
+    GW_PRINT_KEY-ZSVF_DOC_TYPE = GW_ZSVF001-ZSVF_DOC_TYPE.
+    GW_PRINT_KEY-ZSVF_DOC_NUM  = GW_ZSVF001-ZSVF_DOC_NUM.
+    GW_PRINT_KEY-ZSVF_DOC_ITEM = GW_ZSVF001-ZSVF_DOC_ITEM.
+    GW_PRINT_KEY-ZSVF_DOC_ID   = GW_ZSVF001-ZSVF_DOC_ID.
+    GW_PRINT_KEY-ZSVF_PRT_NO   = GW_ZSVF001-ZSVF_PRT_NO.
+
+    CLEAR GW_DATA.
+    MOVE-CORRESPONDING GW_ZSVF001 TO GW_DATA.
+
+    CASE GW_PRINT_KEY-ZSVF_DOC_TYPE.
+
+      WHEN GC_DOC_TYPE_PURO. "Purchase Order
+        SELECT * FROM ZSVF008
+          INTO TABLE GT_ZSVF008
+          WHERE EBELN = GW_PRINT_KEY-ZSVF_DOC_NUM+8(10)
+          AND ZSVF_DOC_ID = GW_PRINT_KEY-ZSVF_DOC_ID.
+        SELECT * FROM ZSVF009
+          INTO TABLE GT_ZSVF009
+          WHERE EBELN = GW_PRINT_KEY-ZSVF_DOC_NUM+8(10)
+* 2015-04-29 Bug fix
+*          AND EBELP = GW_PRINT_KEY-ZSVF_DOC_ITEM+1(5)
+          AND ZSVF_DOC_ID = GW_PRINT_KEY-ZSVF_DOC_ID.
+        ASSIGN GT_ZSVF008 TO <GT_HEADER>.
+        ASSIGN GT_ZSVF009 TO <GT_ITEM>.
+
+      WHEN GC_DOC_TYPE_GRPO. "###
+        SELECT * FROM ZSVF011
+          INTO TABLE GT_ZSVF011
+          WHERE EBELN = GW_PRINT_KEY-ZSVF_DOC_NUM+8(10)
+          AND EBELP = GW_PRINT_KEY-ZSVF_DOC_ITEM+1(5)
+          AND ZSVF_DOC_ID = GW_PRINT_KEY-ZSVF_DOC_ID.
+        ASSIGN GT_ZSVF011 TO <GT_HEADER>.
+        ASSIGN GT_DUMMY TO <GT_ITEM>.
+
+      WHEN GC_DOC_TYPE_PRSO. "####
+        SELECT * FROM ZSVF002
+          INTO TABLE GT_ZSVF002
+          WHERE AUFNR = GW_PRINT_KEY-ZSVF_DOC_NUM+6(12)
+          AND ZSVF_DOC_ID = GW_PRINT_KEY-ZSVF_DOC_ID.
+        SELECT * FROM ZSVF003
+          INTO TABLE GT_ZSVF003
+          WHERE AUFNR = GW_PRINT_KEY-ZSVF_DOC_NUM+6(12)
+* 2015-04-29 Bug fix
+*          AND RSPOS = GW_PRINT_KEY-ZSVF_DOC_ITEM+2(4)
+          AND ZSVF_DOC_ID = GW_PRINT_KEY-ZSVF_DOC_ID.
+        ASSIGN GT_ZSVF002 TO <GT_HEADER>.
+        ASSIGN GT_ZSVF003 TO <GT_ITEM>.
+
+      WHEN GC_DOC_TYPE_IPLT. "###
+        SELECT * FROM ZSVF006
+                  INTO TABLE GT_ZSVF006
+                  WHERE PRUEFLOS = GW_PRINT_KEY-ZSVF_DOC_NUM+6(12)
+                  AND ZSVF_DOC_ID = GW_PRINT_KEY-ZSVF_DOC_ID.
+        SELECT * FROM ZSVF007
+                  INTO TABLE GT_ZSVF007
+                  WHERE PRUEFLOS = GW_PRINT_KEY-ZSVF_DOC_NUM+6(12)
+* 2015-04-29 Bug fix
+*                  AND MERKNR = GW_PRINT_KEY-ZSVF_DOC_ITEM+2(4)
+                  AND ZSVF_DOC_ID = GW_PRINT_KEY-ZSVF_DOC_ID.
+        ASSIGN GT_ZSVF006 TO <GT_HEADER>.
+        ASSIGN GT_ZSVF007 TO <GT_ITEM>.
+
+      WHEN GC_DOC_TYPE_LAPT. "Label
+        SELECT * FROM ZSVF010
+          INTO TABLE GT_ZSVF010
+          WHERE AUFNR = GW_PRINT_KEY-ZSVF_DOC_NUM+6(12)
+          AND ZSVF_DOC_ID = GW_PRINT_KEY-ZSVF_DOC_ID.
+        ASSIGN GT_ZSVF010 TO <GT_HEADER>.
+        ASSIGN GT_DUMMY TO <GT_ITEM>.
+    ENDCASE.
+
+* Lock table entry
+* - If one entry is locked, it is probably processed by the user transactions.
+* - Hence there is no need to send this type of print request.
+    PERFORM FRM_LOCK_ZSVF001_DATA USING GW_PRINT_KEY CHANGING GV_LOCKED.
+    CHECK GV_LOCKED = 'X'.
+
+    CALL FUNCTION 'Z_SVF_SEND_PRINT_REQUEST'
+      EXPORTING
+        I_PRINT_KEY              = GW_PRINT_KEY
+        I_COMMIT                 = 'X'
+      TABLES
+        IT_DOC_HEADER            = <GT_HEADER>
+        IT_DOC_ITEM              = <GT_ITEM>
+      EXCEPTIONS
+        SEND_PRINT_REQUEST_ERROR = 1
+        OTHERS                   = 2.
+
+    IF SY-SUBRC <> 0.
+* ALV Message
+      GW_DATA-TYPE = 'E'.
+      GW_DATA-RESULT = 'Re-send failed. Please check log table ZSVF013.'.
+      GW_DATA-RESULT = GV_MESSAGE.
+    ELSE.
+      GW_DATA-TYPE = 'S'.
+      GW_DATA-RESULT = 'Re-send succeeded. Status changed to C0.'.
+    ENDIF.
+
+* Unlock table entry
+    PERFORM FRM_UNLOCK_ZSVF001_DATA USING GW_PRINT_KEY.
+
+    "Displaying Counter
+    GW_DATA-ZSVF_PRTAMT = GW_DATA-ZSVF_PRTAMT + 1.
+
+* ALV Lights
+    CASE GW_DATA-TYPE.
+      WHEN ' ' OR 'S' OR 'I'.
+        GW_DATA-LIGHTS = '3'.
+      WHEN 'W'.
+        GW_DATA-LIGHTS = '2'.
+      WHEN 'A' OR 'E' OR 'X'.
+        GW_DATA-LIGHTS = '1'.
+    ENDCASE.
+
+    APPEND GW_DATA TO GT_DATA.
+  ENDLOOP. "LOOP AT GT_ZSVF001
+
+  IF GT_DATA[] IS INITIAL.
+    MESSAGE S999.
+    LEAVE LIST-PROCESSING.
+  ENDIF.
+
+ENDFORM.                    " FRM_PROCESS_DATA

@@ -1,0 +1,127 @@
+FUNCTION Z_SVF_STATUS_CREATE.
+*"----------------------------------------------------------------------
+*"*"#####
+*"  IMPORTING
+*"     VALUE(ZSVF_DOC_TYPE) TYPE  ZSVF_DOC_TYPE
+*"     VALUE(ZSVF_DOC_NUM)
+*"     VALUE(ZSVF_DOC_ITEM) OPTIONAL
+*"     VALUE(ZSVF_DOC_ID) TYPE  ZSVF_DOC_ID
+*"  TABLES
+*"      IT_ZSVF005_KOM STRUCTURE  ZSVF005_KOM
+*"      OT_PRINT_KEY STRUCTURE  ZSVF001_KEY
+*"  EXCEPTIONS
+*"      INPUT_FIELD_IS_INITIAL
+*"----------------------------------------------------------------------
+* Change Log:
+* 2014-09-24 This function module is created by Arwen
+*----------------------------------------------------------------------*
+  DATA: LW_ZSVF005_KOM  TYPE ZSVF005_KOM,
+        LT_ZSVF001      TYPE TABLE OF ZSVF001,
+        LW_ZSVF001      TYPE ZSVF001,
+        LT_ZSVF015      TYPE TABLE OF ZSVF015,
+        LW_ZSVF015      TYPE ZSVF015,
+        LV_DOC_NUM      TYPE ZSVF_DOC_NUM,
+        LV_DOC_ITEM     TYPE ZSVF_DOC_ITEM,
+        LW_PRINT_KEY    TYPE ZSVF001_KEY,
+        LV_CSV_FILENAME TYPE PATHEXTERN,
+        LV_LOGICAL_PATH TYPE PATHINTERN.
+
+  CLEAR OT_PRINT_KEY[].
+
+  LV_DOC_NUM = ZSVF_DOC_NUM.
+  LV_DOC_ITEM = ZSVF_DOC_ITEM.
+
+*----------------------------------------------------------------------*
+* Check Input Parameter
+*----------------------------------------------------------------------*
+  IF ZSVF_DOC_TYPE IS INITIAL
+   OR LV_DOC_NUM IS INITIAL
+   OR ZSVF_DOC_ID IS INITIAL.
+    RAISE INPUT_FIELD_IS_INITIAL.
+  ENDIF.
+
+  LOOP AT IT_ZSVF005_KOM INTO LW_ZSVF005_KOM.
+    "Printer Configuration Serial Number
+    IF LW_ZSVF005_KOM-ZSVF_PRT_CONT IS INITIAL.
+* Error log
+      "...
+      RAISE INPUT_FIELD_IS_INITIAL.
+    ENDIF.
+  ENDLOOP. "LOOP AT IT_ZSVF005_KOM
+
+*----------------------------------------------------------------------*
+* Prepare data
+*----------------------------------------------------------------------*
+  LOOP AT IT_ZSVF005_KOM INTO LW_ZSVF005_KOM.
+
+* Table ZSVF001
+    CLEAR LW_ZSVF001.
+    MOVE-CORRESPONDING LW_ZSVF005_KOM TO LW_ZSVF001.
+* Primary Key
+    LW_ZSVF001-ZSVF_DOC_TYPE = ZSVF_DOC_TYPE.
+    LW_ZSVF001-ZSVF_DOC_NUM = LV_DOC_NUM.
+    LW_ZSVF001-ZSVF_DOC_ITEM = LV_DOC_ITEM.
+    LW_ZSVF001-ZSVF_DOC_ID = ZSVF_DOC_ID.
+    LW_ZSVF001-ZSVF_PRT_NO = LW_ZSVF005_KOM-ZSVF_PRT_CONT.
+* DKI Log for creation
+    LW_ZSVF001-LOG_REPID = SY-REPID.
+    LW_ZSVF001-LOG_UNAME = SY-UNAME.
+    LW_ZSVF001-LOG_DATUM = SY-DATUM.
+    LW_ZSVF001-LOG_UZEIT = SY-UZEIT.
+    APPEND LW_ZSVF001 TO LT_ZSVF001.
+
+* Table ZSVF015
+    CLEAR LW_ZSVF015.
+    MOVE-CORRESPONDING LW_ZSVF005_KOM TO LW_ZSVF015.
+* Primary Key
+    LW_ZSVF015-ZSVF_DOC_TYPE = ZSVF_DOC_TYPE.
+    LW_ZSVF015-ZSVF_DOC_NUM = LV_DOC_NUM.
+    LW_ZSVF015-ZSVF_DOC_ITEM = LV_DOC_ITEM.
+    LW_ZSVF015-ZSVF_DOC_ID = ZSVF_DOC_ID.
+    LW_ZSVF015-ZSVF_PRT_NO = LW_ZSVF005_KOM-ZSVF_PRT_CONT.
+
+    " CSV File Name
+    CLEAR LW_PRINT_KEY.
+    MOVE-CORRESPONDING LW_ZSVF001 TO LW_PRINT_KEY.
+    CALL FUNCTION 'Z_SVF_CSV_FILENAME_CREATE'
+      EXPORTING
+        PRINT_KEY    = LW_PRINT_KEY
+      IMPORTING
+        CSV_FILENAME = LV_CSV_FILENAME.
+    LW_ZSVF015-ZSVF_CSV_FNAME = LV_CSV_FILENAME.
+
+    "Logical Path
+    CALL FUNCTION 'Z_SVF_LOGICAL_PATH_GET'
+      EXPORTING
+        I_DOC_TYPE     = LW_PRINT_KEY-ZSVF_DOC_TYPE
+      IMPORTING
+        O_LOGICAL_PATH = LV_LOGICAL_PATH.
+
+    LW_ZSVF015-ZSVF_CSV_LOC = LV_LOGICAL_PATH.
+    LW_ZSVF015-ZSVF_CRDDATE = SY-DATUM.
+
+    "Department Name, added by Arwen, 2015-03-03
+    IF LW_ZSVF015-ZSVF_DEPT_ID IS NOT INITIAL.
+      SELECT SINGLE ZSVF_DEPT_NAME FROM ZSVF014
+        INTO (LW_ZSVF015-ZSVF_DEPT_NAME)
+        WHERE ZSVF_DEPT_ID = LW_ZSVF015-ZSVF_DEPT_ID.
+    ENDIF.
+
+* DKI Log for creation
+    LW_ZSVF015-LOG_REPID = SY-REPID.
+    LW_ZSVF015-LOG_UNAME = SY-UNAME.
+    LW_ZSVF015-LOG_DATUM = SY-DATUM.
+    LW_ZSVF015-LOG_UZEIT = SY-UZEIT.
+    APPEND LW_ZSVF015 TO LT_ZSVF015.
+
+* Output Print Request Key
+    APPEND LW_PRINT_KEY TO OT_PRINT_KEY.
+  ENDLOOP. "LOOP AT IT_ZSVF005_KOM
+
+*----------------------------------------------------------------------*
+* Create an Entry in Status Table
+*----------------------------------------------------------------------*
+  INSERT ZSVF001 FROM TABLE LT_ZSVF001.
+  INSERT ZSVF015 FROM TABLE LT_ZSVF015.
+
+ENDFUNCTION.

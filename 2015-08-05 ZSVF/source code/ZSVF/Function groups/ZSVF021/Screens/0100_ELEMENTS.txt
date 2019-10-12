@@ -1,0 +1,16 @@
+TCTRL_ZSVF021	
+VIM_FRAME_FIELD	____________________________________________________________
+*ZSVF021-BUKRS	CoCd
+*ZSVF021-ZSVF_DOC_TYPE	DocT
+*ZSVF021-ZSVF_INACTIVE	Inac.
+*ZSVF021-ZSVF_DELEDAY	Days
+*ZSVF021-ZSVF_COGRD	Consider
+VIM_MARKED	_
+ZSVF021-BUKRS	____
+ZSVF021-ZSVF_DOC_TYPE	____
+ZSVF021-ZSVF_INACTIVE	_
+ZSVF021-ZSVF_DELEDAY	_______
+ZSVF021-ZSVF_COGRD	_
+VIM_POSI_PUSH	____________________
+VIM_POSITION_INFO	______________________________
+OK_CODE	____

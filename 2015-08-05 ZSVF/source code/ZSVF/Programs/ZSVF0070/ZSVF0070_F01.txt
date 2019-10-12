@@ -1,0 +1,236 @@
+*&---------------------------------------------------------------------*
+*&  ##                ZSVF0070_F01
+*&---------------------------------------------------------------------*
+FORM FRM_DATA_CONVERT USING P_IN CHANGING P_OUT.
+  CALL FUNCTION 'CONVERSION_EXIT_ALPHA_OUTPUT'
+    EXPORTING
+      INPUT  = P_IN
+    IMPORTING
+      OUTPUT = P_OUT.
+ENDFORM.
+*&---------------------------------------------------------------------*
+*&      Form  FRM_GET_VENDOR_ADDRESS
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+*      -->P_ADRNR  text
+*      <--P_NAME1  text
+*      <--P_NAME2  text
+*      <--P_NAME3  text
+*      <--P_PSTLZ  text
+*      <--P_STRAS  text
+*      <--P_TELF1  text
+*      <--P_TELFX  text
+*----------------------------------------------------------------------*
+FORM FRM_GET_VENDOR_ADDRESS  USING    P_ADRNR
+                                      P_LANGU
+                             CHANGING P_NAME1
+                                      P_NAME2
+                                      P_NAME3
+                                      P_PSTLZ
+                                      P_STRAS
+                                      P_TELF1
+                                      P_TELFX.
+  DATA:
+* Importing
+    LW_ADDRESS_SELECTION TYPE ADDR1_SEL,
+*    LW_ADDRESS_GROUP           TYPE ADRG-ADDR_GROUP,
+*    LW_READ_SADR_ONLY          TYPE SZAD_FIELD-FLAG,
+*    LW_READ_TEXTS              TYPE SZAD_FIELD-FLAG,
+*    LW_IV_CURRENT_COMM_DATA    TYPE AD_COMCURR,
+*    LW_BLK_EXCPT               TYPE AD_BLKFLAG,
+* Exporting
+    LW_ADDRESS_VALUE     TYPE ADDR1_VAL,
+*    LW_ADDRESS_ADDITIONAL_INFO TYPE AD1_FLAGS,
+*    LW_RETURNCODE              TYPE SZAD_FIELD-RETURNCODE,
+*    LW_ADDRESS_TEXT            TYPE ADDR1_TEXT,
+    LW_SADR              TYPE SADR.
+
+  CHECK P_ADRNR IS NOT INITIAL.
+  LW_ADDRESS_SELECTION-ADDRNUMBER = P_ADRNR.
+
+  CALL FUNCTION 'ADDR_GET'
+    EXPORTING
+      ADDRESS_SELECTION = LW_ADDRESS_SELECTION
+*     ADDRESS_GROUP     =
+*     READ_SADR_ONLY    = ' '
+*     READ_TEXTS        = ' '
+*     IV_CURRENT_COMM_DATA          = ' '
+*     BLK_EXCPT         =
+    IMPORTING
+      ADDRESS_VALUE     = LW_ADDRESS_VALUE
+*     ADDRESS_ADDITIONAL_INFO       =
+*     RETURNCODE        =
+*     ADDRESS_TEXT      =
+      SADR              = LW_SADR
+* TABLES
+*     ADDRESS_GROUPS    =
+*     ERROR_TABLE       =
+*     VERSIONS          =
+    EXCEPTIONS
+      PARAMETER_ERROR   = 1
+      ADDRESS_NOT_EXIST = 2
+      VERSION_NOT_EXIST = 3
+      INTERNAL_ERROR    = 4
+      ADDRESS_BLOCKED   = 5
+      OTHERS            = 6.
+
+  IF SY-SUBRC <> 0.
+    RETURN.
+  ENDIF.
+
+  P_NAME1 = LW_ADDRESS_VALUE-NAME1.
+  P_NAME2 = LW_ADDRESS_VALUE-NAME2.
+  P_NAME3 = LW_ADDRESS_VALUE-NAME3.
+*  P_STRAS = LW_ADDRESS_VALUE-STREET. "deleted on 2015-05-12
+  P_TELF1 = LW_ADDRESS_VALUE-TEL_NUMBER.
+
+  P_PSTLZ = LW_SADR-PSTLZ.
+  P_TELFX = LW_SADR-TELFX.
+
+* Added on 2015-05-12
+  CALL FUNCTION 'Z_SVF_GET_ADDR_DAIKIN_FORMAT' "Encapsulated, 2015-05-11
+    EXPORTING
+      I_LANGU      = P_LANGU
+      I_CITY1      = LW_ADDRESS_VALUE-CITY1 "AD_CITY1, Char 40
+      I_STREET     = LW_ADDRESS_VALUE-STREET "AD_STREET, Char 60
+      I_CITY2      = LW_ADDRESS_VALUE-CITY2 "AD_CITY2, Char 40
+      I_STR_SUPPL1 = LW_ADDRESS_VALUE-STR_SUPPL1 "AD_STRSPP1, Char 40
+    IMPORTING
+      O_DELADS     = P_STRAS. "Char 186
+
+ENDFORM.                    " FRM_GET_VENDOR_ADDRESS
+*&---------------------------------------------------------------------*
+*&      Form  FRM_CURRENCY_AMOUNT_TO_DISPLAY
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+*      -->P_AMOUNT_INTERNAL  text
+*      <--P_AMOUNT_DISPLAY  text
+*----------------------------------------------------------------------*
+FORM FRM_CURRENCY_AMOUNT_TO_DISPLAY USING P_WAERS
+                                    CHANGING P_AMOUNT.
+
+  DATA: LV_AMOUNT_INTERNAL TYPE WMTO_S-AMOUNT,
+        LV_AMOUNT_DISPLAY  TYPE WMTO_S-AMOUNT.
+
+  LV_AMOUNT_INTERNAL = P_AMOUNT.
+
+  CALL FUNCTION 'CURRENCY_AMOUNT_SAP_TO_DISPLAY'
+    EXPORTING
+      CURRENCY        = P_WAERS
+      AMOUNT_INTERNAL = LV_AMOUNT_INTERNAL
+    IMPORTING
+      AMOUNT_DISPLAY  = LV_AMOUNT_DISPLAY
+    EXCEPTIONS
+      INTERNAL_ERROR  = 1
+      OTHERS          = 2.
+
+  IF SY-SUBRC <> 0.
+    RETURN.
+  ENDIF.
+
+  P_AMOUNT = LV_AMOUNT_DISPLAY.
+
+ENDFORM.                    " FRM_CURRENCY_AMOUNT_TO_DISPLAY
+*&---------------------------------------------------------------------*
+*&      Form  FRM_NAST_PROTOCAL_UPDATE
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+*      -->P_MSG_ARBGB  text
+*      -->P_MSG_NR  text
+*      -->P_MSG_TY  text
+*      -->P_MSG_V1  text
+*      -->P_MSG_V2  text
+*      -->P_MSG_V3  text
+*      -->P_MSG_V4  text
+*----------------------------------------------------------------------*
+FORM FRM_NAST_PROTOCAL_UPDATE  USING    P_MSG_ARBGB
+                                        P_MSG_NR
+                                        P_MSG_TY
+                                        P_MSG_V1
+                                        P_MSG_V2
+                                        P_MSG_V3
+                                        P_MSG_V4.
+
+  CALL FUNCTION 'NAST_PROTOCOL_UPDATE'
+    EXPORTING
+      MSG_ARBGB              = P_MSG_ARBGB
+      MSG_NR                 = P_MSG_NR
+      MSG_TY                 = P_MSG_TY
+      MSG_V1                 = P_MSG_V1
+      MSG_V2                 = P_MSG_V2
+      MSG_V3                 = P_MSG_V3
+      MSG_V4                 = P_MSG_V4
+    EXCEPTIONS
+      MESSAGE_TYPE_NOT_VALID = 1
+      NO_SY_MESSAGE          = 2
+      OTHERS                 = 3.
+
+ENDFORM.                    " FRM_NAST_PROTOCAL_UPDATE
+*&---------------------------------------------------------------------*
+*&      Form  FRM_SORT_ITEMS
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+*      -->P_ZSVF009  text
+*----------------------------------------------------------------------*
+FORM FRM_SORT_ITEMS  TABLES   PT_ZSVF009 STRUCTURE ZSVF009.
+*----------------------------------------------------------------------*
+* Change Log
+* 2015-06-12 Group by addr_no, but sort by ebelp ascending
+*----------------------------------------------------------------------*
+  TYPES: BEGIN OF LTY_GROUP,
+           ADDR_NO TYPE ZSVF009-ADDR_NO,
+           EBELP   TYPE ZSVF009-EBELP,
+         END OF LTY_GROUP.
+
+  TYPES: BEGIN OF LTY_SORT,
+           EBELP   TYPE ZSVF009-EBELP,
+           ADDR_NO TYPE ZSVF009-ADDR_NO,
+         END OF LTY_SORT.
+
+  DATA: LT_SORT      TYPE TABLE OF LTY_SORT,
+        LW_SORT      TYPE LTY_SORT,
+        LT_GROUP     TYPE TABLE OF LTY_GROUP,
+        LW_GROUP     TYPE LTY_GROUP,
+        LT_GROUP_TMP TYPE TABLE OF LTY_GROUP,
+        LW_GROUP_TMP TYPE LTY_GROUP,
+        LW_ZSVF009   TYPE ZSVF009,
+        LT_RESULT    TYPE TABLE OF ZSVF009.
+
+  LOOP AT PT_ZSVF009 INTO LW_ZSVF009.
+    CLEAR LW_GROUP.
+    MOVE-CORRESPONDING LW_ZSVF009 TO LW_GROUP.
+    APPEND LW_GROUP TO LT_GROUP.
+  ENDLOOP.
+
+  SORT LT_GROUP.
+
+  MOVE LT_GROUP[] TO LT_GROUP_TMP[].
+  DELETE ADJACENT DUPLICATES FROM LT_GROUP_TMP
+                  COMPARING ADDR_NO.
+  LOOP AT LT_GROUP_TMP INTO LW_GROUP_TMP.
+    CLEAR LW_SORT.
+    MOVE-CORRESPONDING LW_GROUP_TMP TO LW_SORT.
+    APPEND LW_SORT TO LT_SORT.
+  ENDLOOP. "LOOP AT LT_GROUP_TMP
+  CLEAR LT_GROUP_TMP[].
+  SORT LT_SORT BY EBELP.
+
+  LOOP AT LT_SORT INTO LW_SORT.
+    LOOP AT LT_GROUP INTO LW_GROUP
+                     WHERE ADDR_NO = LW_SORT-ADDR_NO.
+      READ TABLE PT_ZSVF009 INTO LW_ZSVF009
+                            WITH KEY EBELP = LW_GROUP-EBELP
+                                     ADDR_NO = LW_GROUP-ADDR_NO.
+      CHECK SY-SUBRC = 0.
+      APPEND LW_ZSVF009 TO LT_RESULT.
+    ENDLOOP. "Loop at lt_group
+  ENDLOOP. "LOOP AT LT_SORT
+
+  CLEAR PT_ZSVF009[].
+  PT_ZSVF009[] = LT_RESULT[].
+
+ENDFORM.                    " FRM_SORT_ITEMS

@@ -1,0 +1,13 @@
+Text-symbols
+001	has/have been changed.
+002	Track No.
+003	Material Number
+004	Quantity
+005	Unit Price (w/o Tax)
+006	Amount (w/o Tax)
+007	Delivery Date
+008	Tax Code
+009	Amount (w/ Tax)
+010	Description
+011	Remarks
+

@@ -1,0 +1,83 @@
+*&---------------------------------------------------------------------*
+*&  Include           ZSVF0090_TOP
+*&---------------------------------------------------------------------*
+* TYPES:  BEGIN OF MEEIN_PURCHASE_DOC_PRINT,
+*         XEKKO   LIKE EKKO,
+*         XPEKKO  LIKE PEKKO,
+*         XEKPA   LIKE MSGPA  OCCURS 0,
+*         XEKPO   LIKE EKPO  OCCURS 0,
+*         XPEKPO  LIKE PEKPO OCCURS 0,
+*         XEKET   LIKE EKET  OCCURS 0,
+*         XEKKN   LIKE EKKN  OCCURS 0,
+*         XEKEK   LIKE EKEK  OCCURS 0,
+*         XEKEH   LIKE EKEH  OCCURS 0,
+*         XAEND   TYPE MEEIN_XAEND OCCURS 0,
+*         XTKOMV  TYPE KOMV  OCCURS 0,
+*         XISAUTOEKLWES LIKE ISAUTOEKLWES OCCURS 0,
+*         END OF MEEIN_PURCHASE_DOC_PRINT.
+
+* for getting data from memory
+  DATA: GV_DRUVO       LIKE T166K-DRUVO,
+        GW_NAST        LIKE NAST,
+        GV_FROM_MEMORY,
+        GW_DOC         TYPE MEEIN_PURCHASE_DOC_PRINT,
+        GW_XEKPO       TYPE EKPO,
+        GW_XEKKN       TYPE EKKN, " Account Assignment
+        GW_XEKET       TYPE EKET, " Schedule Line
+        GW_EBAN        TYPE EBAN. "Purchase Requistition
+
+* for print request status
+  DATA: GT_PRINT_KEY     TYPE TABLE OF ZSVF001_KEY,
+        GW_PRINT_KEY     TYPE ZSVF001_KEY,
+        GT_ZSVF001       TYPE TABLE OF ZSVF001,
+        GW_ZSVF001       TYPE ZSVF001,
+        GT_ZSVF005       TYPE TABLE OF ZSVF005,
+        GW_ZSVF005       TYPE ZSVF005,
+        GT_ZSVF005_KOM   TYPE TABLE OF ZSVF005_KOM,
+        GW_ZSVF005_KOM   TYPE ZSVF005_KOM,
+        GT_ZSVF011       TYPE TABLE OF ZSVF011,
+        GW_ZSVF011       TYPE ZSVF011,
+        GV_DOC_TYPE_DESC TYPE ZSVF_DOC_TYPE_DESC.
+
+  DATA: GV_ERROR               TYPE C,
+        GV_MSG_V1              TYPE SY-MSGV1,
+        GV_PRINT_EXCEPTION(50) TYPE C,
+        GV_LOCKED              TYPE C.
+
+  DEFINE MACRO_PRINT_FAILED.
+* Unlock copy ID
+    READ TABLE GT_PRINT_KEY INTO GW_PRINT_KEY INDEX 1.
+    IF SY-SUBRC = 0.
+      CALL FUNCTION 'Z_SVF_COPYID_DEQUEUE'
+        EXPORTING
+          I_DOC_TYPE            = GW_PRINT_KEY-ZSVF_DOC_TYPE
+          I_DOC_NUM             = GW_PRINT_KEY-ZSVF_DOC_NUM
+        EXCEPTIONS
+          EQUEUE_DOC_ID_FAILURE = 1
+          OTHERS                = 2.
+    ENDIF.
+
+    LOOP AT GT_PRINT_KEY INTO GW_PRINT_KEY.
+      PERFORM FRM_UNLOCK_ZSVF001_DATA USING GW_PRINT_KEY.
+    ENDLOOP.
+
+      "SVF403: #### & #######
+      GV_MSG_V1 = GW_DOC-XEKKO-EBELN.
+      SHIFT GV_MSG_V1 LEFT DELETING LEADING '0'.
+      CALL FUNCTION 'NAST_PROTOCOL_UPDATE'
+        EXPORTING
+          MSG_ARBGB              = 'ZSVF'
+          MSG_NR                 = '403'
+          MSG_TY                 = 'E'
+          MSG_V1                 = GV_MSG_V1
+*   MSG_V2                 =
+*   MSG_V3                 =
+*   MSG_V4                 =
+        EXCEPTIONS
+          MESSAGE_TYPE_NOT_VALID = 1
+          NO_SY_MESSAGE          = 2
+          OTHERS                 = 3.
+
+      ENT_RETCO = '2'.
+      RETURN. "Exit Form
+  END-OF-DEFINITION.

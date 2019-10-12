@@ -1,0 +1,35 @@
+*******************************************************************
+*   System-defined Include-files.                                 *
+*******************************************************************
+  INCLUDE LZSVF_MEDRUCKTOP.                       " Global Data
+  INCLUDE LZSVF_MEDRUCKUXX.                       " Function Modules
+
+*******************************************************************
+*   User-defined Include-files (if necessary).                    *
+*******************************************************************
+* INCLUDE LMEDRUCKF...                       " Subprograms
+* INCLUDE LMEDRUCKO...                       " PBO-Modules
+* INCLUDE LMEDRUCKI...                       " PAI-Modules
+
+INCLUDE LZSVF_MEDRUCKF01.
+*INCLUDE LMEDRUCKF01.
+
+INCLUDE LZSVF_MEDRUCKF02.
+*INCLUDE LMEDRUCKF02.
+
+INCLUDE LZSVF_MEDRUCKF1S.
+*INCLUDE LMEDRUCKF1S.
+
+INCLUDE LZSVF_MEDRUCKE01.
+*INCLUDE LMEDRUCKE01.
+
+*ENHANCEMENT-POINT SAPLMEDRUCK_01 SPOTS ES_SAPLMEDRUCK STATIC.
+INCLUDE LZSVF_MEDRUCKF1T.
+*INCLUDE LMEDRUCKF1T.
+
+INCLUDE LZSVF_MEDRUCKF1U.
+*INCLUDE LMEDRUCKF1U.
+
+*INCLUDE lzsvf_medruckf03.
+
+*INCLUDE lzsvf_medruckf03.

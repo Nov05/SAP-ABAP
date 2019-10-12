@@ -1,0 +1,55 @@
+***********************************************************************
+* Project Name : Daikin DCC Upgrading - SVF
+* Program Name : ZSVF0110
+* Description  : Read SVF Logs
+* Date/Autohr  : 2014-09-19 / Nov05
+***********************************************************************
+* M O D I F I C A T I O N  L O G
+***********************************************************************
+* ChangeDate  Programmer  Request     Description
+* ==========  ==========  ==========  =================================
+*
+***********************************************************************
+REPORT  ZSVF0110
+*   NO STANDARD PAGE HEADING
+*   LINE-SIZE 120
+*   LINE-COUNT 90
+MESSAGE-ID ZSVF.
+
+INCLUDE ZSVF_TOP01.
+INCLUDE ZSVF_TOP02.
+
+DATA: GV_PROGRAM        TYPE TRDIR-NAME,
+      GV_PROGRAM_LOCKED TYPE C.
+
+END-OF-SELECTION.
+* Lock program
+  CONCATENATE SY-MANDT SY-CPROG INTO GV_PROGRAM.
+  PERFORM FRM_LOCK_PROGRAM USING GV_PROGRAM
+                           CHANGING GV_PROGRAM_LOCKED.
+  IF GV_PROGRAM_LOCKED <> 'X'.
+    "The Same program is in execution.
+    MESSAGE S039 DISPLAY LIKE 'E'.
+    LEAVE PROGRAM.
+  ENDIF.
+
+* Process log files
+  CALL FUNCTION 'Z_SVF_SVFLOG_READ'
+    EXCEPTIONS
+      SVFLOG_FILEPATH_ERROR      = 1
+      SVFLOG_GET_DIRECTORY_ERROR = 2
+      SVFLOG_FILE_MOVING_ERROR   = 3
+      OTHERS                     = 4.
+  IF SY-SUBRC <> 0.
+    "SVF Log files processing error. Please check log table ZSVF013.
+    MESSAGE S040 DISPLAY LIKE 'E'.
+* Unlock program
+    PERFORM FRM_UNLOCK_PROGRAM USING GV_PROGRAM.
+    LEAVE PROGRAM.
+  ELSE.
+    "SVF Log files have been successfully processed.
+    MESSAGE S041.
+  ENDIF.
+
+* Unlock program
+  PERFORM FRM_UNLOCK_PROGRAM USING GV_PROGRAM.

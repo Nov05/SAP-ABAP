@@ -1,0 +1,46 @@
+FUNCTION Z_SVF_GET_PO_CHANGES_ALL.
+*"----------------------------------------------------------------------
+*"*"Local Interface:
+*"  IMPORTING
+*"     VALUE(I_EKKO) TYPE  EKKO OPTIONAL
+*"  TABLES
+*"      IT_EKPO STRUCTURE  EKPO OPTIONAL
+*"      IT_EKET STRUCTURE  EKET OPTIONAL
+*"      OT_PO_CHANGES_KOM STRUCTURE  ZSVF_PO_CHANGES_KOM OPTIONAL
+*"----------------------------------------------------------------------
+  DATA: LW_EKPO           TYPE EKPO,
+        LW_EKET           TYPE EKET,
+        LW_PO_CHANGES_KOM TYPE ZSVF_PO_CHANGES_KOM.
+
+  IF I_EKKO IS NOT INITIAL.
+    CALL FUNCTION 'Z_SVF_GET_PO_CHANGES'
+      EXPORTING
+        I_STRUC_TYPE     = GC_STRUC_TYPE_HEADER
+        I_STRUC_NAME     = GC_CHG_STRUC_H_PURO
+        I_EKKO           = I_EKKO
+*       I_EKPO           =
+*       I_EKET           =
+      IMPORTING
+        O_PO_CHANGES_KOM = LW_PO_CHANGES_KOM.
+    APPEND LW_PO_CHANGES_KOM TO OT_PO_CHANGES_KOM.
+  ENDIF.
+
+  IF IT_EKPO[] IS NOT INITIAL.
+    LOOP AT IT_EKPO INTO LW_EKPO.
+      CLEAR LW_EKET.
+      READ TABLE IT_EKET INTO LW_EKET WITH KEY EBELN = LW_EKPO-EBELN
+                                               EBELP = LW_EKPO-EBELP.
+      CALL FUNCTION 'Z_SVF_GET_PO_CHANGES'
+        EXPORTING
+          I_STRUC_TYPE     = GC_STRUC_TYPE_ITEM
+          I_STRUC_NAME     = GC_CHG_STRUC_I_PURO
+*         I_EKKO           =
+          I_EKPO           = LW_EKPO
+          I_EKET           = LW_EKET
+        IMPORTING
+          O_PO_CHANGES_KOM = LW_PO_CHANGES_KOM.
+      APPEND LW_PO_CHANGES_KOM TO OT_PO_CHANGES_KOM.
+    ENDLOOP. "LOOP AT LT_EKPO
+  ENDIF.
+
+ENDFUNCTION.

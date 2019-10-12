@@ -1,0 +1,159 @@
+FUNCTION Z_SVF_SVFLOG_MOVE.
+*"----------------------------------------------------------------------
+*"*"Local Interface:
+*"  IMPORTING
+*"     VALUE(I_DOC_TYPE_SOURCE)
+*"     VALUE(I_DOC_TYPE_TARGET)
+*"     VALUE(I_FILE_NAME)
+*"  EXPORTING
+*"     VALUE(O_LOGICAL_PATH_TARGET) TYPE  PATHINTERN
+*"  EXCEPTIONS
+*"      SOURCE_LOGICAL_PATH_ERROR
+*"      TARGET_LOGICAL_PATH_ERROR
+*"      SOURCE_FILE_DELETE_ERROR
+*"      FILE_MOVE_ERROR
+*"----------------------------------------------------------------------
+* Change Log:
+* 2014-09-23 This function is created by Arwen.
+*----------------------------------------------------------------------*
+  DATA: LV_FILEPATH_SOURCE TYPE PATHEXTERN,
+        LV_FILEPATH_TARGET TYPE PATHEXTERN,
+        LV_SOURCEPATH      TYPE SAPB-SAPPFAD,
+        LV_TARGETPATH	     TYPE SAPB-SAPPFAD,
+        LV_LOGICAL_PATH    TYPE PATHINTERN.
+
+* Message
+  DATA: LV_MESSAGE TYPE STRING.
+
+* Flag
+  DATA: LV_FILE_DELETED TYPE C.
+
+  CLEAR O_LOGICAL_PATH_TARGET.
+
+*----------------------------------------------------------------------*
+* Get source physical path
+*----------------------------------------------------------------------*
+  CALL FUNCTION 'Z_SVF_FILEPATH_GET'
+    EXPORTING
+      I_DOC_TYPE         = I_DOC_TYPE_SOURCE
+      I_FILE_NAME        = I_FILE_NAME
+    IMPORTING
+      O_FILEPATH         = LV_FILEPATH_SOURCE
+      O_LOGICAL_PATH     = LV_LOGICAL_PATH
+    EXCEPTIONS
+      GET_FILEPATH_ERROR = 1
+      OTHERS             = 2.
+
+  IF SY-SUBRC <> 0.
+* Log
+    "## SVF Log: ########### &#### &
+    MACRO_SVF_LOG_WRITE_1 'E' "Message Type
+                          '032' "Message Number
+                          LV_LOGICAL_PATH "Message Variant 1
+                          I_FILE_NAME "Message Variant 2
+                          '' "Message Variant 3
+                          ''. "Message Variant 4
+* Message and exception
+    MESSAGE S032(ZSVF) WITH LV_LOGICAL_PATH
+                            LV_FILEPATH_SOURCE
+                       DISPLAY LIKE 'E'
+                       RAISING SOURCE_LOGICAL_PATH_ERROR.
+  ENDIF.
+
+*----------------------------------------------------------------------*
+* Get target physical path
+*----------------------------------------------------------------------*
+  CALL FUNCTION 'Z_SVF_FILEPATH_GET'
+    EXPORTING
+      I_DOC_TYPE         = I_DOC_TYPE_TARGET
+      I_FILE_NAME        = I_FILE_NAME
+    IMPORTING
+      O_FILEPATH         = LV_FILEPATH_TARGET
+      O_LOGICAL_PATH     = LV_LOGICAL_PATH
+    EXCEPTIONS
+      GET_FILEPATH_ERROR = 1
+      OTHERS             = 2.
+
+  IF SY-SUBRC <> 0.
+* Log
+    "## SVF Log: ########### &#### &
+    MACRO_SVF_LOG_WRITE_1 'E' "Message Type
+                          '032' "Message Number
+                          LV_LOGICAL_PATH "Message Variant 1
+                          I_FILE_NAME "Message Variant 2
+                          '' "Message Variant 3
+                          ''. "Message Variant 4
+* Message and exception
+    MESSAGE S032(ZSVF) WITH LV_LOGICAL_PATH
+                            LV_FILEPATH_TARGET
+                       DISPLAY LIKE 'E'
+                       RAISING TARGET_LOGICAL_PATH_ERROR.
+  ENDIF.
+
+* Output
+  O_LOGICAL_PATH_TARGET = LV_LOGICAL_PATH.
+*----------------------------------------------------------------------*
+* Move file
+*----------------------------------------------------------------------*
+  LV_SOURCEPATH = LV_FILEPATH_SOURCE.
+  LV_TARGETPATH = LV_FILEPATH_TARGET.
+
+  CALL FUNCTION 'ARCHIVFILE_SERVER_TO_SERVER'
+    EXPORTING
+      SOURCEPATH       = LV_SOURCEPATH
+      TARGETPATH       = LV_TARGETPATH
+* IMPORTING
+*     LENGTH           =
+    EXCEPTIONS
+      ERROR_FILE       = 1
+      NO_AUTHORIZATION = 2
+      OTHERS           = 3.
+
+  IF SY-SUBRC <> 0.
+    MESSAGE ID SY-MSGID TYPE SY-MSGTY NUMBER SY-MSGNO
+            WITH SY-MSGV1 SY-MSGV2 SY-MSGV3 SY-MSGV4
+            INTO LV_MESSAGE.
+* Log
+    "## SVF Log: &
+    MACRO_SVF_LOG_WRITE_1 'E' "Message Type
+                          '033' "Message Number
+                          LV_MESSAGE "Message Variant 1
+                          '' "Message Variant 2
+                          '' "Message Variant 3
+                          ''. "Message Variant 4
+* Message and exception
+    MESSAGE S033(ZSVF) WITH LV_MESSAGE
+                       DISPLAY LIKE 'E'
+                       RAISING FILE_MOVE_ERROR.
+  ENDIF.
+
+*----------------------------------------------------------------------*
+* Delete source file
+*----------------------------------------------------------------------*
+  CLEAR LV_FILE_DELETED.
+  DO 2 TIMES.
+    DELETE DATASET LV_SOURCEPATH.
+    IF SY-SUBRC = 0.
+      LV_FILE_DELETED = 'X'.
+      EXIT. "exit do
+    ELSE.
+      WAIT UP TO 1 SECONDS.
+    ENDIF.
+  ENDDO.
+
+  IF LV_FILE_DELETED <> 'X'.
+* Log
+    "## SVF Log: ###### &
+    MACRO_SVF_LOG_WRITE_1 'E' "Message Type
+                          '034' "Message Number
+                          LV_SOURCEPATH "Message Variant 1
+                          '' "Message Variant 2
+                          '' "Message Variant 3
+                          ''. "Message Variant 4
+* Message and exception
+    MESSAGE S034(ZSVF) WITH LV_SOURCEPATH
+                       DISPLAY LIKE 'E'
+                       RAISING SOURCE_FILE_DELETE_ERROR.
+  ENDIF.
+
+ENDFUNCTION.

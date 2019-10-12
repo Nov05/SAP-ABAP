@@ -1,0 +1,30 @@
+*&---------------------------------------------------------------------*
+*&  Include           ZSVF0090_I04
+*&---------------------------------------------------------------------*
+
+CLEAR GV_PRINT_EXCEPTION.
+
+LOOP AT GT_PRINT_KEY INTO GW_PRINT_KEY
+                     WHERE ZSVF_DOC_NUM = GW_ZSVF011-EBELN
+                     AND ZSVF_DOC_ITEM = GW_ZSVF011-EBELP.
+
+  CALL FUNCTION 'Z_SVF_SEND_PRINT_REQUEST'
+    EXPORTING
+      I_PRINT_KEY              = GW_PRINT_KEY
+      I_COMMIT                 = ' ' "Do not commit here
+    TABLES
+      IT_DOC_HEADER            = GT_ZSVF011
+    EXCEPTIONS
+      SEND_PRINT_REQUEST_ERROR = 1
+      PRINTER_NAME_ERROR       = 2
+      OTHERS                   = 3.
+
+  CASE SY-SUBRC.
+    WHEN 0.  "do nothing
+    WHEN 2.
+      MESSAGE S037 INTO GV_PRINT_EXCEPTION.
+    WHEN OTHERS.
+      MACRO_PRINT_FAILED.
+  ENDCASE.
+
+ENDLOOP. "loop at gt_print_key

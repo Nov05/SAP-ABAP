@@ -1,0 +1,10 @@
+TCTRL_ZSVF019	
+VIM_FRAME_FIELD	____________________________________________________________
+*ZSVF019-ZSVF_SDRID	Sndr. ID
+*ZSVF019-ZSVF_MAILSDR	Mail Sender
+VIM_MARKED	_
+ZSVF019-ZSVF_SDRID	____
+ZSVF019-ZSVF_MAILSDR	____________________________________________________________________________________________________________________________________
+VIM_POSI_PUSH	____________________
+VIM_POSITION_INFO	______________________________
+OK_CODE	____

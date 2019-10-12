@@ -1,0 +1,27 @@
+FUNCTION Z_SVF_GET_LANGUAGE_BY_VENDOR.
+*"----------------------------------------------------------------------
+*"*"Local Interface:
+*"  IMPORTING
+*"     VALUE(I_LIFNR) TYPE  LIFNR
+*"  EXPORTING
+*"     VALUE(O_SPRAS) TYPE  SPRAS
+*"----------------------------------------------------------------------
+  DATA: LW_LFA1 TYPE LFA1.
+
+  CLEAR O_SPRAS.
+
+  CHECK I_LIFNR IS NOT INITIAL.
+
+* Get vendor's country
+  SELECT SINGLE * FROM LFA1 INTO LW_LFA1
+    WHERE LIFNR = I_LIFNR.
+
+* Get langau
+  CALL FUNCTION 'Z_SVF_GET_LANGUAGE'
+    EXPORTING
+*     I_SPRAS =
+      I_LAND1 = LW_LFA1-LAND1
+    IMPORTING
+      O_SPRAS = O_SPRAS.
+
+ENDFUNCTION.

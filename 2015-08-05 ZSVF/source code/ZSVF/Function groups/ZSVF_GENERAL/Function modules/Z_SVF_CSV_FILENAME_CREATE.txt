@@ -1,0 +1,24 @@
+FUNCTION Z_SVF_CSV_FILENAME_CREATE.
+*"----------------------------------------------------------------------
+*"*"Local Interface:
+*"  IMPORTING
+*"     VALUE(PRINT_KEY) TYPE  ZSVF001_KEY
+*"  EXPORTING
+*"     VALUE(CSV_FILENAME) TYPE  PATHEXTERN
+*"----------------------------------------------------------------------
+
+  CLEAR CSV_FILENAME.
+
+* Check print request key
+  "...
+
+* Create .CSV file name
+  CONCATENATE PRINT_KEY-ZSVF_DOC_TYPE
+              PRINT_KEY-ZSVF_DOC_NUM
+              PRINT_KEY-ZSVF_DOC_ITEM
+              PRINT_KEY-ZSVF_DOC_ID
+              PRINT_KEY-ZSVF_PRT_NO
+              GC_EXTENSION_CSV
+              INTO CSV_FILENAME.
+
+ENDFUNCTION.

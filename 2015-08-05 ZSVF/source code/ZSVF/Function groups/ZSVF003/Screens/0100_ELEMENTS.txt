@@ -1,0 +1,42 @@
+TCTRL_ZSVF003	
+VIM_FRAME_FIELD	____________________________________________________________
+*ZSVF003-AUFNR	Order
+*ZSVF003-RSPOS	Item No.Stock Transfer Reserv.
+*ZSVF003-ZSVF_DOC_ID	Copy ID
+*ZSVF003-MATNR	Material
+*ZSVF003-MAKTX	Material Description
+*ZSVF003-WERKS	Plnt
+*ZSVF003-LGORT	SLoc
+*ZSVF003-CHARG	Batch
+*ZSVF003-BDMNG	Requirement Quantity
+*ZSVF003-MEINS	BUn
+*ZSVF003-LOG_REPID	Program Name
+*ZSVF003-LOG_UNAME	User Name
+*ZSVF003-LOG_DATUM	Date
+*ZSVF003-LOG_UZEIT	Time
+*ZSVF003-LOG_REPID_CHG	Program Name
+*ZSVF003-LOG_UNAME_CHG	User Name
+*ZSVF003-LOG_DATUM_CHG	Date
+*ZSVF003-LOG_UZEIT_CHG	Time
+VIM_MARKED	_
+ZSVF003-AUFNR	____________
+ZSVF003-RSPOS	____
+ZSVF003-ZSVF_DOC_ID	____
+ZSVF003-MATNR	__________________
+ZSVF003-MAKTX	________________________________________
+ZSVF003-WERKS	____
+ZSVF003-LGORT	____
+ZSVF003-CHARG	__________
+ZSVF003-BDMNG	_________________
+ZSVF003-MEINS	___
+ZSVF003-LOG_REPID	________________________________________
+ZSVF003-LOG_UNAME	____________
+ZSVF003-LOG_DATUM	__________
+ZSVF003-LOG_UZEIT	________
+ZSVF003-LOG_REPID_CHG	________________________________________
+ZSVF003-LOG_UNAME_CHG	____________
+ZSVF003-LOG_DATUM_CHG	__________
+ZSVF003-LOG_UZEIT_CHG	________
+VIM_POSI_PUSH	____________________
+VIM_POSITION_INFO	______________________________
+OK_CODE	____

@@ -1,0 +1,136 @@
+FUNCTION Z_SVF_GET_DEPT_AND_LINE .
+*"----------------------------------------------------------------------
+*"*"Local Interface:
+*"  IMPORTING
+*"     VALUE(I_MATNR) TYPE  MATNR
+*"     VALUE(I_CTYPE) TYPE  KLAH-KLART DEFAULT '001'
+*"     VALUE(I_WERKS) TYPE  AFPO-DWERK
+*"     VALUE(I_APRIO) TYPE  CO_APRIO OPTIONAL
+*"  EXPORTING
+*"     VALUE(O_LABEL_CLASS_FOUND) TYPE  XFELD
+*"     VALUE(O_DEPT) TYPE  ZSVF_PDDEPT
+*"     VALUE(O_LINE) TYPE  ZSVF_PDLINE
+*"     VALUE(O_LABLTYPE) TYPE  ZSVF_LABLTYPE
+*"     VALUE(O_MATNAM) TYPE  ZSVF_MATNAM
+*"     VALUE(O_MATLOT) TYPE  ZSVF_MATLOT
+*"  EXCEPTIONS
+*"      PLANT_IS_INVALID
+*"      NO_CLASSIFICATION_FOUND
+*"----------------------------------------------------------------------
+  DATA: LT_CLASS      TYPE TABLE OF SCLASS,
+        LT_OBJECTDATA TYPE TABLE OF CLOBJDAT WITH HEADER LINE,
+        LV_LEN        TYPE STRING,
+        LV_LAST       TYPE STRING,
+        LV_OBJECT     TYPE AUSP-OBJEK,
+        LV_WERKS      TYPE WERKS_D.
+
+  CLEAR: O_LABEL_CLASS_FOUND,
+         O_DEPT, O_LINE,
+         O_LABLTYPE, O_MATNAM, O_MATLOT.
+
+*----------------------------------------------------------------------*
+* Check and Convert Input
+*----------------------------------------------------------------------*
+  CHECK I_MATNR IS NOT INITIAL AND I_WERKS IS NOT INITIAL.
+
+* check material
+  CALL FUNCTION 'CONVERSION_EXIT_MATN1_INPUT'
+    EXPORTING
+      INPUT        = I_MATNR
+    IMPORTING
+      OUTPUT       = I_MATNR
+    EXCEPTIONS
+      LENGTH_ERROR = 1
+      OTHERS       = 2.
+
+  LV_OBJECT = I_MATNR.
+
+* Check plant
+  SELECT SINGLE WERKS FROM T001W INTO (LV_WERKS) WHERE WERKS = I_WERKS.
+  IF SY-SUBRC <> 0.
+    RAISE PLANT_IS_INVALID.
+  ENDIF.
+
+*----------------------------------------------------------------------*
+* Get Material Characteristics
+*----------------------------------------------------------------------*
+* Production Line
+  CLEAR LT_OBJECTDATA[].
+  CALL FUNCTION 'CLAF_CLASSIFICATION_OF_OBJECTS'
+    EXPORTING
+*     CLASS              = ' '
+*     CLASSTEXT          = 'X'
+      CLASSTYPE          = I_CTYPE
+*     CLINT              = 0
+*     FEATURES           = 'X'
+*     LANGUAGE           = SY-LANGU
+      OBJECT             = LV_OBJECT
+*     OBJECTTABLE        = ' '
+*     KEY_DATE           = SY-DATUM
+      INITIAL_CHARACT    = ' '
+      NO_VALUE_DESCRIPT  = 'X' "Get value, not description
+*     CHANGE_SERVICE_CLF = 'X'
+*     INHERITED_CHAR     = ' '
+*     CHANGE_NUMBER      = ' '
+    TABLES
+      T_CLASS            = LT_CLASS
+      T_OBJECTDATA       = LT_OBJECTDATA
+*     I_SEL_CHARACTERISTIC       =
+*     T_NO_AUTH_CHARACT  =
+    EXCEPTIONS
+      NO_CLASSIFICATION  = 1
+      NO_CLASSTYPES      = 2
+      INVALID_CLASS_TYPE = 3
+      OTHERS             = 4.
+  IF SY-SUBRC <> 0.
+    RAISE NO_CLASSIFICATION_FOUND.
+  ENDIF.
+
+  READ TABLE LT_CLASS WITH KEY CLASS = 'ZSVF_LABEL_PTFE'
+                      TRANSPORTING NO FIELDS.
+  IF SY-SUBRC = 0.
+    O_LABEL_CLASS_FOUND = 'X'.
+  ENDIF.
+
+  LOOP AT LT_OBJECTDATA.
+    CONDENSE LT_OBJECTDATA-AUSP1.
+
+    CASE LT_OBJECTDATA-ATNAM.
+      WHEN 'ZSVF_LABEL_PRODNAME'.
+        O_MATNAM = LT_OBJECTDATA-AUSP1. "##
+        CONTINUE.
+      WHEN 'ZSVF_LABEL_LOTSIZE'.
+        O_MATLOT = LT_OBJECTDATA-AUSP1. "####
+        CONTINUE.
+      WHEN 'ZSVF_LABEL_TYPE'.
+        O_LABLTYPE = LT_OBJECTDATA-AUSP1. "####
+        CONTINUE.
+*      WHEN OTHERS.
+        "do nothing
+    ENDCASE.
+
+    "Get the last four characters
+    LV_LEN = STRLEN( LT_OBJECTDATA-ATNAM ) - 4.
+    LV_LAST = LT_OBJECTDATA-ATNAM+LV_LEN(4).
+
+    CHECK LV_LAST = I_WERKS.
+    CASE LT_OBJECTDATA-ATNAM+0(13).
+      WHEN 'ZSVF_PRD_DEPT'.
+        O_DEPT = LT_OBJECTDATA-AUSP1.
+        CONTINUE.
+      WHEN 'ZSVF_PRD_LINE'.
+        O_LINE = LT_OBJECTDATA-AUSP1.
+        CONTINUE.
+*      WHEN OTHERS.
+        "do nothing
+    ENDCASE.
+  ENDLOOP. "LOOP AT LT_OBJECTDATA.
+
+*----------------------------------------------------------------------*
+* Production Line
+*----------------------------------------------------------------------*
+  IF I_APRIO IS NOT INITIAL.
+    O_LINE = I_APRIO.
+  ENDIF.
+
+ENDFUNCTION.

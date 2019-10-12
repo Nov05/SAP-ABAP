@@ -1,0 +1,413 @@
+FUNCTION Z_SVF_CSV_FILE_CREATE.
+*"----------------------------------------------------------------------
+*"*"Local Interface:
+*"  IMPORTING
+*"     VALUE(I_PRINT_KEY) TYPE  ZSVF001_KEY
+*"     VALUE(I_CSV_HEADER_STRUC) TYPE  ROLLNAME DEFAULT
+*"       'ZSVF_CSV_HEADER'
+*"     VALUE(I_HEADER_STRUC) TYPE  ROLLNAME OPTIONAL
+*"     VALUE(I_ITEM_STRUC) TYPE  ROLLNAME OPTIONAL
+*"  EXPORTING
+*"     VALUE(O_CSV_FNAME) TYPE  ZSVF_CSV_FNAME
+*"  TABLES
+*"      IT_HEADER OPTIONAL
+*"      IT_ITEM OPTIONAL
+*"  EXCEPTIONS
+*"      PRINT_KEY_ERROR
+*"      GET_FILEPATH_ERROR
+*"      OPEN_DATASET_ERROR
+*"      CLOSE_DATASET_ERROR
+*"----------------------------------------------------------------------
+* Change Log:
+* 1. 2015-03-03 SVF print authorization is no longer controlled by
+*               ZSVF_USERNAME. Instead, ZSVF_DOC_TYPE, BUKRS, ZSVF_DEPT_ID
+*               have been added.
+*----------------------------------------------------------------------*
+  DATA: LV_TABNAME             TYPE  DDOBJNAME,
+        LT_DFIES_TAB           TYPE TABLE OF DFIES,
+        LW_DFIES_TAB           TYPE DFIES,
+        LT_CSV_STRING          TYPE TABLE OF STRING,
+        LV_CSV_STRING          TYPE STRING,
+        LV_STRING              TYPE STRING,
+        LV_FIELD               TYPE STRING,
+        LV_TABIX               TYPE SY-TABIX,
+        LV_POSITION            TYPE I,
+        LV_FUNC_NAME           TYPE RS38L_FNAM,
+        LV_MESSAGE             TYPE STRING,
+        LV_BUKRS               TYPE BUKRS,
+        LV_WERKS               TYPE WERKS_D,
+        LV_EINDT               TYPE EKET-EINDT,
+        LV_SPOOR_STAY_DAYS_STR TYPE STRING.
+
+  DATA: LW_ZSVF001    TYPE ZSVF001,
+        LW_ZSVF015    TYPE ZSVF015,
+        LW_CSV_HEADER TYPE ZSVF_CSV_HEADER.
+
+  DATA: LV_FILEPATH TYPE PATHEXTERN,
+        LV_FILENAME TYPE STRING. "AUTHB-FILENAME.
+
+  FIELD-SYMBOLS: <FIELD> TYPE ANY,
+                 <STRUC> TYPE ANY.
+
+*----------------------------------------------------------------------*
+* Check input parameters
+*----------------------------------------------------------------------*
+  SELECT SINGLE * FROM ZSVF001 INTO LW_ZSVF001
+    WHERE ZSVF_DOC_TYPE = I_PRINT_KEY-ZSVF_DOC_TYPE
+    AND ZSVF_DOC_NUM = I_PRINT_KEY-ZSVF_DOC_NUM
+    AND ZSVF_DOC_ITEM = I_PRINT_KEY-ZSVF_DOC_ITEM
+    AND ZSVF_DOC_ID = I_PRINT_KEY-ZSVF_DOC_ID
+    AND ZSVF_PRT_NO = I_PRINT_KEY-ZSVF_PRT_NO.
+
+  IF SY-SUBRC <> 0.
+    "## CSV ######## & ###Print Request Key ###&
+    MACRO_SVF_LOG_WRITE I_PRINT_KEY "Print request Key
+                        'E'    "Message Type
+                        '019'  "Message Number
+                        'ZSVF001' "Message Variant 1
+                        I_PRINT_KEY "Message Variant 2
+                        '' "Message Variant 3
+                        ''. "Message Variant 4
+    RAISE PRINT_KEY_ERROR.
+  ENDIF.
+*----------------------------------------------------------------------*
+* Get configurations
+*----------------------------------------------------------------------*
+  SELECT SINGLE * FROM ZSVF015 INTO LW_ZSVF015
+    WHERE ZSVF_DOC_TYPE = I_PRINT_KEY-ZSVF_DOC_TYPE
+    AND ZSVF_DOC_NUM = I_PRINT_KEY-ZSVF_DOC_NUM
+    AND ZSVF_DOC_ITEM = I_PRINT_KEY-ZSVF_DOC_ITEM
+    AND ZSVF_DOC_ID = I_PRINT_KEY-ZSVF_DOC_ID
+    AND ZSVF_PRT_NO = I_PRINT_KEY-ZSVF_PRT_NO.
+
+*  CSV file header:
+*  ZSVF_SPLNAME   Document Name    =  ZSVF015-ZSVF_SPLNAME
+*  ZSVF_USERNAME  User Name        =  ZSVF015-ZSVF_USERNAME
+*  ZSVF_CPRNAME   Computer Name    =  CSV File Name
+*  ZSVF_CRDDATE   Created on       =  ZSVF015-ZSVF_CRDDATE
+*  ZSVF_PRINTER   RDE Printer Name =  ZSVF015-ZSVF_PRINTER  - if print method is Print
+*  ZSVF_PRT_PDF   PDF Printer Name =  ZSVF015-ZSVF_PRINTER  - if print method is PDF
+*  ZSVF_MAILSDR   Email Sender     =
+*  ZSVF_MAILRCR   Email receiver   =  ZSVF015-PRINTER       - if print method is Email
+*  ZSVF_MAILSJT   Email Subject    =  ZSVF015-ZSVF_SPLNAME  - if print method is Email
+
+  IF SY-SUBRC <> 0.
+    "## CSV ######## & ###Print Request Key ###&
+    MACRO_SVF_LOG_WRITE I_PRINT_KEY "Print request Key
+                        'E'    "Message Type
+                        '019'  "Message Number
+                        'ZSVF015' "Message Variant 1
+                        I_PRINT_KEY "Message Variant 2
+                        '' "Message Variant 3
+                        ''. "Message Variant 4
+    RAISE PRINT_KEY_ERROR.
+  ELSE.
+    MOVE-CORRESPONDING LW_ZSVF015 TO LW_CSV_HEADER.
+    O_CSV_FNAME = LW_ZSVF015-ZSVF_CSV_FNAME.
+    LW_CSV_HEADER-ZSVF_SPLNAME = LW_ZSVF015-ZSVF_SPLNAM.
+    LW_CSV_HEADER-ZSVF_USERNAME = LW_ZSVF015-ZSVF_USERNAME.
+
+* 2015-03-03 Added fields for SVF authorization
+    LW_CSV_HEADER-BUKRS = LW_ZSVF001-BUKRS.
+    LW_CSV_HEADER-ZSVF_DOC_TYPE = LW_ZSVF015-ZSVF_DOC_TYPE.
+    LW_CSV_HEADER-ZSVF_DEPT_ID = LW_ZSVF015-ZSVF_DEPT_ID.
+    LW_CSV_HEADER-ZSVF_DEPT_NAME = LW_ZSVF015-ZSVF_DEPT_NAME.
+    CALL FUNCTION 'Z_SVF_GET_DOC_TYPE_DESC'
+      EXPORTING
+        I_DOC_TYPE      = LW_ZSVF015-ZSVF_DOC_TYPE
+        I_LANGU         = '1'
+      IMPORTING
+        O_DOC_TYPE_DESC = LW_CSV_HEADER-ZSVF_DOC_DEC.
+
+* CAUTION: SVF system does not have a field to store CSV file name
+*          Using field for computer name instead !!!
+    LW_CSV_HEADER-ZSVF_CPRNAME = LW_ZSVF015-ZSVF_CSV_FNAME. "LW_ZSVF015-ZSVF_CPRNAME.
+
+    CASE LW_ZSVF015-ZSVF_PRTTYPE.
+      WHEN GC_PRTTYPE_PRINT.
+        LW_CSV_HEADER-ZSVF_PRTNAME = LW_ZSVF015-ZSVF_PRTNAME.
+      WHEN GC_PRTTYPE_PDF.
+        LW_CSV_HEADER-ZSVF_PRT_PDF = LW_ZSVF015-ZSVF_PRTNAME.
+      WHEN GC_PRTTYPE_EMAIL.
+        "Email Sender
+        CALL FUNCTION 'Z_SVF_GET_MAIL_SENDER'
+          IMPORTING
+            O_ZSVF_MAILSDR = LW_CSV_HEADER-ZSVF_MAILSDR.
+        "Email Receiver
+        LW_CSV_HEADER-ZSVF_MAILRCR = LW_ZSVF015-ZSVF_PRTNAME.
+* Email Subject
+* Deleted on 2015-04-08, will be filled along with spool name in print program
+*        LW_CSV_HEADER-ZSVF_MAILSJT = LW_ZSVF015-ZSVF_SPLNAM.
+    ENDCASE.
+
+  ENDIF. "If select ZSVF015, sy-subrc = 0
+
+*----------------------------------------------------------------------*
+* Get spool stay days
+*----------------------------------------------------------------------*
+* Added by Arwen, 2015-02-15
+* Get company, plant, delivery date(only for GRPO).
+  DEFINE MACRO_GET_FIELD_FROM_HEADER.
+    CLEAR &1. UNASSIGN <FIELD>.
+    ASSIGN COMPONENT &2 OF STRUCTURE <STRUC> TO <FIELD>.
+    IF <FIELD> IS ASSIGNED.
+      &1 = <FIELD>.
+    ENDIF.
+  END-OF-DEFINITION.
+
+  UNASSIGN <STRUC>.
+  ASSIGN LW_CSV_HEADER TO <STRUC>.
+  IF <STRUC> IS ASSIGNED.
+    MACRO_GET_FIELD_FROM_HEADER LV_BUKRS 'BUKRS'.
+  ENDIF.
+
+  IF I_HEADER_STRUC IS NOT INITIAL.
+    UNASSIGN <STRUC>.
+    READ TABLE IT_HEADER INDEX 1 ASSIGNING <STRUC>.
+    IF <STRUC> IS ASSIGNED.
+      MACRO_GET_FIELD_FROM_HEADER LV_WERKS 'WERKS'.
+      MACRO_GET_FIELD_FROM_HEADER LV_EINDT 'EINDT'.
+    ENDIF.
+  ENDIF.
+
+* Get spool stay days
+  CALL FUNCTION 'Z_SVF_GET_SPOOL_STAY_TIME'
+    EXPORTING
+      I_BUKRS               = LV_BUKRS
+      I_WERKS               = LV_WERKS
+      I_DOC_TYPE            = I_PRINT_KEY-ZSVF_DOC_TYPE
+      I_EINDT               = LV_EINDT
+    IMPORTING
+*     O_SPOOL_STAY_DAYS     =
+      O_SPOOL_STAY_DAYS_STR = LV_SPOOR_STAY_DAYS_STR.
+
+*----------------------------------------------------------------------*
+* Add SVF Code to control whether it is printed immediately
+*----------------------------------------------------------------------*
+* 2015-01-20 ################
+* E.g.
+*  <start>
+*  VrSetOutputPrinter=DCC_CS999
+*  VrSetDocAttribute=Stop=1,ValidDays=1004
+*  <end>
+  DEFINE MACRO_APPEND_CSV_STRING.
+    CLEAR LV_CSV_STRING.
+    LV_CSV_STRING = &1.
+    APPEND LV_CSV_STRING TO LT_CSV_STRING.
+  END-OF-DEFINITION.
+
+  IF LW_ZSVF015-ZSVF_PRTMED <> 'X' "not print immediately
+    OR LV_SPOOR_STAY_DAYS_STR IS NOT INITIAL. "Spool stay days
+
+* Line 1. Start
+    MACRO_APPEND_CSV_STRING '<start>'.
+
+* Line 2. Declare printer: e.g. VrSetOutputPrinter=DCC_CS999
+    CLEAR LV_STRING.
+    CONCATENATE 'VrSetOutputPrinter='
+                LW_ZSVF015-ZSVF_PRTNAME INTO LV_STRING.
+    CONDENSE LV_STRING NO-GAPS.
+    MACRO_APPEND_CSV_STRING LV_STRING.
+
+* Line 3. Set Attribute: e.g. VrSetDocAttribute=Stop=1,ValidDays=1004
+    CLEAR LV_STRING.
+    LV_STRING = 'VrSetDocAttribute='.
+
+* Line 3.1. Not print immediately
+    IF LW_ZSVF015-ZSVF_PRTMED <> 'X'.
+      CONCATENATE LV_STRING ','
+                  'Stop=1'
+                  INTO LV_STRING.
+    ENDIF.
+
+* Line 3.2. Spool stay days
+    IF LV_SPOOR_STAY_DAYS_STR IS NOT INITIAL.
+      CONCATENATE LV_STRING ','
+                  'ValidDays=' LV_SPOOR_STAY_DAYS_STR
+                  INTO LV_STRING.
+    ENDIF.
+
+    CONDENSE LV_STRING.
+    REPLACE ALL OCCURRENCES OF 'VrSetDocAttribute=,'
+            IN LV_STRING WITH 'VrSetDocAttribute='.
+    MACRO_APPEND_CSV_STRING LV_STRING.
+
+* Line 4. End
+    MACRO_APPEND_CSV_STRING '<end>'.
+
+  ENDIF.
+
+*----------------------------------------------------------------------*
+* CSV Header - Field Technical Names
+*----------------------------------------------------------------------*
+* Get field names
+  CLEAR LT_DFIES_TAB[].
+  LV_TABNAME = I_CSV_HEADER_STRUC. "'ZSVF_CSV_HEADER'.
+  PERFORM FRM_DDIF_FIELDINFO_GET TABLES LT_DFIES_TAB
+                                 USING LV_TABNAME.
+
+  IF I_HEADER_STRUC IS NOT INITIAL.
+    LV_TABNAME = I_HEADER_STRUC.
+    PERFORM FRM_DDIF_FIELDINFO_GET TABLES LT_DFIES_TAB
+                                   USING LV_TABNAME.
+  ENDIF.
+
+  IF I_ITEM_STRUC IS NOT INITIAL.
+    LV_TABNAME = I_ITEM_STRUC.
+    PERFORM FRM_DDIF_FIELDINFO_GET TABLES LT_DFIES_TAB
+                                   USING LV_TABNAME.
+  ENDIF.
+
+* CSV common fields
+  CLEAR LV_CSV_STRING.
+  LOOP AT LT_DFIES_TAB INTO LW_DFIES_TAB.
+    CONDENSE LW_DFIES_TAB-FIELDNAME.
+    IF SY-TABIX = 1.
+      CONCATENATE 'HEADER'
+                  GC_CSV_SEPERATOR
+                  LW_DFIES_TAB-FIELDNAME INTO LV_CSV_STRING.
+    ELSE.
+      CONCATENATE LV_CSV_STRING
+                  GC_CSV_SEPERATOR
+                  LW_DFIES_TAB-FIELDNAME INTO LV_CSV_STRING.
+    ENDIF.
+  ENDLOOP. "loop at lt_dfies_tab
+  APPEND LV_CSV_STRING TO LT_CSV_STRING.
+
+*----------------------------------------------------------------------*
+* CSV Content - CSV Header, Document Header and Items
+*----------------------------------------------------------------------*
+  DEFINE MACRO_FORMAT_CSV.
+* &1 = structure name, e.g. I_CSV_HEADER_STRUC
+* &2 = structure, e.g. LW_CSV_HEADER
+* &3 = line start with, e.g. '*'
+
+    LOOP AT LT_DFIES_TAB INTO LW_DFIES_TAB WHERE TABNAME = &1.
+      LV_POSITION = LV_POSITION + 1.
+
+      CLEAR LV_FIELD.
+      ASSIGN COMPONENT LW_DFIES_TAB-FIELDNAME OF STRUCTURE &2 TO <Field>.
+      IF SY-SUBRC = 0.
+        "Convert to output format
+        IF LW_DFIES_TAB-FIELDNAME <> 'ZSVF_SELNO'
+          "fields that do not need to remove the leading zeros
+          AND LW_DFIES_TAB-CONVEXIT IS NOT INITIAL.
+
+          CLEAR LV_FUNC_NAME.
+          CONCATENATE 'CONVERSION_EXIT_' LW_DFIES_TAB-CONVEXIT '_OUTPUT'
+            INTO LV_FUNC_NAME.
+          CALL FUNCTION LV_FUNC_NAME
+            EXPORTING
+              INPUT        = <Field>
+            IMPORTING
+              OUTPUT       = <Field>
+            EXCEPTIONS
+              LENGTH_ERROR = 1
+              OTHERS       = 2.
+        ENDIF. "IF LW_DFIES_TAB-CONVEXIT IS NOT INITIAL.
+
+        LV_FIELD = <Field>.
+        CONDENSE LV_FIELD.
+        "Remove leading zeros
+        CASE LW_DFIES_TAB-FIELDNAME.
+          WHEN 'PRUEFLOS' "############
+            OR 'ZSVF_ORD_NO' "#########
+            OR 'MERKNR' "########Inspection Characteristic Number
+            OR 'EBELP' "#########
+            OR 'RSPOS' "######BOM/RESB####
+            .
+            SHIFT LV_FIELD LEFT DELETING LEADING '0'.
+        ENDCASE.
+      ENDIF.
+
+* CSV escape characters, added on 2015-04-08
+      IF LV_FIELD CA '''' OR LV_FIELD CA '"'.
+        REPLACE ALL OCCURRENCES OF '"' IN LV_FIELD WITH '""'.
+        CONCATENATE '"' LV_FIELD '"' INTO LV_FIELD.
+      ENDIF.
+
+      IF LV_POSITION = 1.
+        IF &3 <> ''.
+          CONCATENATE &3 GC_CSV_SEPERATOR LV_FIELD INTO LV_CSV_STRING.
+        ELSE.
+          LV_CSV_STRING = LV_FIELD.
+        ENDIF.
+      ELSE.
+       CONCATENATE LV_CSV_STRING
+                   GC_CSV_SEPERATOR
+                   LV_FIELD
+              INTO LV_CSV_STRING.
+      ENDIF.
+    ENDLOOP. "loop at lt_dfies_tab
+  END-OF-DEFINITION.
+
+  LOOP AT IT_HEADER.
+    CLEAR: LV_CSV_STRING, LV_POSITION.
+* CSV Header Data
+    MACRO_FORMAT_CSV I_CSV_HEADER_STRUC LW_CSV_HEADER '*'.
+* Order Header Data
+    MACRO_FORMAT_CSV I_HEADER_STRUC IT_HEADER '*'.
+    APPEND LV_CSV_STRING TO LT_CSV_STRING.
+
+* Order Item Data
+    LOOP AT IT_ITEM.
+      CLEAR: LV_CSV_STRING, LV_POSITION.
+      MACRO_FORMAT_CSV I_ITEM_STRUC IT_ITEM ''.
+      APPEND LV_CSV_STRING TO LT_CSV_STRING.
+    ENDLOOP. "loop at it_item
+  ENDLOOP. "loop at it_header
+
+*----------------------------------------------------------------------*
+* Output text file
+*----------------------------------------------------------------------*
+* Get physical file path
+  CALL FUNCTION 'Z_SVF_FILEPATH_GET'
+    EXPORTING
+      I_DOC_TYPE         = I_PRINT_KEY-ZSVF_DOC_TYPE
+      I_FILE_NAME        = LW_ZSVF015-ZSVF_CSV_FNAME
+    IMPORTING
+      O_FILEPATH         = LV_FILEPATH
+    EXCEPTIONS
+      GET_FILEPATH_ERROR = 1
+      OTHERS             = 2.
+
+  IF SY-SUBRC <> 0.
+    RAISE GET_FILEPATH_ERROR.
+  ENDIF.
+  LV_FILENAME = LV_FILEPATH.
+
+* Output to dataset
+  CLEAR LV_MESSAGE.
+  OPEN DATASET LV_FILENAME FOR OUTPUT IN TEXT MODE ENCODING UTF-8
+    MESSAGE LV_MESSAGE.
+  IF SY-SUBRC <> 0.
+    "Message Class ZSVF: ## CSV ##### dataset & &
+    MACRO_SVF_LOG_WRITE I_PRINT_KEY "Print request Key
+                        'E'    "Message Type
+                        '012'  "Message Number
+                        LV_FILENAME "Message Variant 1
+                        LV_MESSAGE "Message Variant 2
+                        '' "Message Variant 3
+                        ''. "Message Variant 4
+    RAISE OPEN_DATASET_ERROR.
+  ENDIF.
+
+  LOOP AT LT_CSV_STRING INTO LV_CSV_STRING.
+    TRANSFER LV_CSV_STRING TO LV_FILENAME.
+  ENDLOOP. "loop at LT_CSV_STRING
+
+  CLOSE DATASET LV_FILENAME.
+
+  IF SY-SUBRC <> 0.
+    "## CSV ##### dataset & ##
+    MACRO_SVF_LOG_WRITE I_PRINT_KEY "Print request Key
+                        'E'    "Message Type
+                        '013'  "Message Number
+                        LV_FILENAME "Message Variant 1
+                        '' "Message Variant 2
+                        '' "Message Variant 3
+                        ''. "Message Variant 4
+    MESSAGE S013(ZSVF) RAISING CLOSE_DATASET_ERROR.
+  ENDIF.
+
+ENDFUNCTION.

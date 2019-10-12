@@ -1,0 +1,60 @@
+TCTRL_ZSVF015	
+VIM_FRAME_FIELD	____________________________________________________________
+*ZSVF015-ZSVF_DOC_TYPE	DocT
+*ZSVF015-ZSVF_DOC_NUM	Document Number
+*ZSVF015-ZSVF_DOC_ITEM	Doc. Item
+*ZSVF015-ZSVF_DOC_ID	Copy ID
+*ZSVF015-ZSVF_PRT_NO	S.No.
+*ZSVF015-ZSVF_PRTID	Printer Key
+*ZSVF015-ZSVF_CSV_FNAME	CSV File Name
+*ZSVF015-ZSVF_CSV_LOC	CSV File Logical Path
+*ZSVF015-ZSVF_SPLNAM	SVF Spool Name
+*ZSVF015-ZSVF_MAILSJT	SVF Mail Subject
+*ZSVF015-ZSVF_USERNAME	SVF User Name
+*ZSVF015-ZSVF_DEPT_ID	Department ID
+*ZSVF015-ZSVF_DEPT_NAME	Department
+*ZSVF015-ZSVF_CPRNAME	SVF Computer Name
+*ZSVF015-ZSVF_PRTNAME	Printer Name
+*ZSVF015-ZSVF_PRTMED	Pr Imd
+*ZSVF015-ZSVF_PRTTYPE	Type
+*ZSVF015-ZSVF_CREATOR	Created By
+*ZSVF015-ZSVF_CRDDATE	Created On
+*ZSVF015-LOG_REPID	Program Name
+*ZSVF015-LOG_UNAME	User Name
+*ZSVF015-LOG_DATUM	Date
+*ZSVF015-LOG_UZEIT	Time
+*ZSVF015-LOG_REPID_CHG	Program Name
+*ZSVF015-LOG_UNAME_CHG	User Name
+*ZSVF015-LOG_DATUM_CHG	Date
+*ZSVF015-LOG_UZEIT_CHG	Time
+VIM_MARKED	_
+ZSVF015-ZSVF_DOC_TYPE	____
+ZSVF015-ZSVF_DOC_NUM	__________________
+ZSVF015-ZSVF_DOC_ITEM	______
+ZSVF015-ZSVF_DOC_ID	____
+ZSVF015-ZSVF_PRT_NO	____
+ZSVF015-ZSVF_PRTID	__________
+ZSVF015-ZSVF_CSV_FNAME	____________________________________________________________________________________________________________________________________
+ZSVF015-ZSVF_CSV_LOC	____________________________________________________________
+ZSVF015-ZSVF_SPLNAM	____________________________________________________________________________________________________________________________________
+ZSVF015-ZSVF_MAILSJT	____________________________________________________________________________________________________________________________________
+ZSVF015-ZSVF_USERNAME	____________________________________________________________________________________________________
+ZSVF015-ZSVF_DEPT_ID	________________________________________
+ZSVF015-ZSVF_DEPT_NAME	________________________________________
+ZSVF015-ZSVF_CPRNAME	____________________________________________________________________________________________________
+ZSVF015-ZSVF_PRTNAME	____________________________________________________________________________________________________________________________________
+ZSVF015-ZSVF_PRTMED	_
+ZSVF015-ZSVF_PRTTYPE	_
+ZSVF015-ZSVF_CREATOR	____________
+ZSVF015-ZSVF_CRDDATE	__________
+ZSVF015-LOG_REPID	________________________________________
+ZSVF015-LOG_UNAME	____________
+ZSVF015-LOG_DATUM	__________
+ZSVF015-LOG_UZEIT	________
+ZSVF015-LOG_REPID_CHG	________________________________________
+ZSVF015-LOG_UNAME_CHG	____________
+ZSVF015-LOG_DATUM_CHG	__________
+ZSVF015-LOG_UZEIT_CHG	________
+VIM_POSI_PUSH	____________________
+VIM_POSITION_INFO	______________________________
+OK_CODE	____

@@ -1,0 +1,618 @@
+*&---------------------------------------------------------------------*
+*&  Include           ZSVF0030_F01
+*&---------------------------------------------------------------------*
+*----------------------------------------------------------------------*
+*       FORM READING_DATA                                              *
+*----------------------------------------------------------------------*
+*  Alle für den Ausdruck der Prüfanweisung notwendigen Daten           *
+*  werden in dieser Routine beschafft und in den Workareas bzw.        *
+*  internen Tabellen zur Verfügung gestellt.                           *
+*----------------------------------------------------------------------*
+FORM READING_DATA.
+
+* inspection lot
+  CLEAR: G_QAPOTAB[], G_QAMVTAB[], G_QASVTAB[], G_PRTTAB[], G_QPMLTAB,
+         QALS, G_FIRST_PRINT, G_PRINT_MESSAGE,
+         CAUFVD_TAB[], CAUFVD_TAB, GW_AFKO.
+
+* aktuellen Druckauftrag QM-Daten aus memory
+  IMPORT PRLST_TMP TO PRINT_CO
+         QAPOTAB         TO G_QAPOTAB
+         QAMVTAB         TO G_QAMVTAB
+         QASVTAB         TO G_QASVTAB
+         PRTTAB          TO G_PRTTAB
+         QPMLTAB         TO G_QPMLTAB
+         I_QALS          TO QALS
+         I_FIRST_PRINT   TO G_FIRST_PRINT
+         I_PRINT_MESSAGE TO G_PRINT_MESSAGE FROM MEMORY ID 'QM_PRT01'.
+
+  IF QALS-PRUEFLOS IS INITIAL.
+* aktuellen Druckauftrag QM-Daten aus memory
+    IMPORT PRLST_TMP TO PRINT_CO
+           QAPOTAB         TO G_QAPOTAB
+           QAMVTAB         TO G_QAMVTAB
+           QASVTAB         TO G_QASVTAB
+           PRTTAB          TO G_PRTTAB
+           QPMLTAB         TO G_QPMLTAB
+           I_QALS          TO QALS
+           I_FIRST_PRINT   TO G_FIRST_PRINT
+           I_PRINT_MESSAGE TO G_PRINT_MESSAGE FROM MEMORY ID 'QM_PRT02'.
+  ENDIF.
+*----------------------------------------------------------------------*
+* sort the internal tables
+* sort QAPOTAB by operation number
+  SORT G_QAPOTAB ASCENDING BY MANDANT PRUEFLOS PLNFL VORNR.
+
+* sort QASVTAB FOR BINARY SEARCH
+  SORT G_QASVTAB ASCENDING BY  MANDANT
+                               PRUEFLOS
+                               VORGLFNR
+                               MERKNR
+                               PROBENR.
+
+  IF QALS-AUFNR IS NOT INITIAL.
+* production order
+* Get document-tables from memory
+    IMPORT CAUFVD_TAB "headers
+*         AFPOD_TAB  "positions
+*         AFFLD_TAB  "sequences
+*         AFVGD_TAB  "operations/suboperations
+*         RESBD_TAB  "components
+*         AFFHD_TAB  "PRTs
+*         WORK_TAB   "workcenters sorted by arbid werks
+*         MV_TAB     "material view sorted by matnr werks
+*         CHARAC_TAB "configuration sorted by cuobj
+*         COBL
+*         KBEDP_TAB  "capacity request sorted by bedid bedzl
+*         COLORD_TAB "collective order info sorted by aufnr
+*         TTL_TAB    "activities sorted by aufpl aplzl
+*         SEROB_TAB  "serialnumbers sorted by ppaufnr ppposnr sernr
+*         AFDLD_TAB  "document links
+           FROM MEMORY ID 'PPT'.
+    READ TABLE CAUFVD_TAB INDEX 1.
+
+* If it is not printed from [COR1/COR2], but from [QA02].
+    IF CAUFVD_TAB[] IS INITIAL.
+      SELECT SINGLE * FROM AFKO
+        INTO CORRESPONDING FIELDS OF GW_AFKO
+        WHERE AUFNR = QALS-AUFNR.
+    ENDIF.
+  ENDIF.
+
+ENDFORM.
+*&---------------------------------------------------------------------*
+*&      Form  FRM_PROCESS_DATA
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+*  -->  p1        text
+*  <--  p2        text
+*----------------------------------------------------------------------*
+FORM FRM_PROCESS_DATA .
+
+* 1. Get printer information
+*   1.1 Decide the printer by configuration
+*   1.2 Decide the printer by user
+* 2. Re-construct data
+* 3. Update document content tables
+*   3.1 Header table ZSVF006
+*   3.2 Item table ZSVF007
+* 4. Update print status table
+
+* Print Request Key
+  CLEAR GW_PRINT_KEY.
+  GW_PRINT_KEY-ZSVF_DOC_TYPE = GC_DOC_TYPE_IPLT.
+  GW_PRINT_KEY-ZSVF_DOC_NUM  = QALS-PRUEFLOS.
+* gw_print_key-zsvf_doc_item = ''. "No item for insp. instr.
+
+  PERFORM FRM_GET_BUKRS_INFO.
+
+  IF QALS-AUFNR IS NOT INITIAL.
+    PERFORM FRM_GET_PDDEPT_PDLINE.
+  ENDIF.
+
+  PERFORM FRM_DECIDE_PRINTER.
+
+* Lock Doc ID of table ZSVF001
+  CALL FUNCTION 'Z_SVF_COPYID_ENQUEUE'
+    EXPORTING
+      I_DOC_TYPE             = GW_PRINT_KEY-ZSVF_DOC_TYPE
+      I_DOC_NUM              = GW_PRINT_KEY-ZSVF_DOC_NUM
+*     I_DOC_ITEM             =
+    EXCEPTIONS
+      ENQUEUE_DOC_ID_FAILURE = 1
+      OTHERS                 = 2.
+  IF SY-SUBRC <> 0.
+*    MESSAGE I998. "####
+*    LEAVE PROGRAM.
+    PERFORM FRM_PRINT_FAILED.
+  ENDIF.
+
+* Get Doc ID
+  CALL FUNCTION 'Z_SVF_COPYID_GET_NEXT'
+    EXPORTING
+      I_DOC_TYPE = GW_PRINT_KEY-ZSVF_DOC_TYPE
+      I_DOC_NUM  = GW_PRINT_KEY-ZSVF_DOC_NUM
+*     I_DOC_ITEM =
+    IMPORTING
+      O_DOC_ID   = GW_PRINT_KEY-ZSVF_DOC_ID.
+
+* Fill internal tables GT_ZSVF006, GT_ZSVF007
+  PERFORM FRM_CONSTRUCT_DATA.
+
+* Get Document Type Description
+  CLEAR GV_DOC_TYPE_DESC.
+  CALL FUNCTION 'Z_SVF_GET_DOC_TYPE_DESC'
+    EXPORTING
+      I_DOC_TYPE      = GW_PRINT_KEY-ZSVF_DOC_TYPE
+      I_LANGU         = '1' "Chinese
+    IMPORTING
+      O_DOC_TYPE_DESC = GV_DOC_TYPE_DESC.
+
+  LOOP AT GT_ZSVF005 INTO GW_ZSVF005.
+    CLEAR GW_ZSVF005_KOM.
+    MOVE-CORRESPONDING GW_ZSVF005 TO GW_ZSVF005_KOM.
+*----------------------------------------------------------------------*
+* Get Spool Name
+*----------------------------------------------------------------------*
+** ###_V####_##_####_###_####_###_###
+** ###_V2_1_G320LBP_20_PF_00025194_20150208_122802_CC005233
+*    MACRO_CONCATENATE_STR:
+*                GV_DOC_TYPE_DESC         GW_ZSVF005_KOM-ZSVF_SPLNAM, "Doc type
+*                '_V'                     GW_ZSVF005_KOM-ZSVF_SPLNAM,
+*                GW_PRINT_KEY-ZSVF_DOC_ID GW_ZSVF005_KOM-ZSVF_SPLNAM, "####
+*                '_'                      GW_ZSVF005_KOM-ZSVF_SPLNAM,
+*                GW_ZSVF005-ZSVF_PRT_CONT GW_ZSVF005_KOM-ZSVF_SPLNAM. "##
+*    CONCATENATE GW_ZSVF005_KOM-ZSVF_SPLNAM
+*                '_' GW_ZSVF006-KTEXTMAT      "####
+*                '_' GW_ZSVF006-CHARG         "###
+*                '_' GW_ZSVF006-PASTRTERM '_' "#### Inspection Start Date
+*                INTO GW_ZSVF005_KOM-ZSVF_SPLNAM.
+*    MACRO_CONCATENATE_STR:
+*                GV_STRING           GW_ZSVF005_KOM-ZSVF_SPLNAM, "###
+*                '_'                 GW_ZSVF005_KOM-ZSVF_SPLNAM,
+*                GW_ZSVF006-SELMATNR GW_ZSVF005_KOM-ZSVF_SPLNAM. "###
+
+* 2014-05-08
+* [#####] 1221951 G320LBP_20_PF 00025194 ###### v2 20150208 CC005233
+    MACRO_CLEAR_STRINGS.
+*    CONCATENATE '[' GV_DOC_TYPE_DESC ']' INTO GV_STR_01. "Doc Type
+    IF GW_ZSVF006-AUFNR IS NOT INITIAL.
+      GV_STR_02 = GW_ZSVF006-AUFNR. "Work Order Number
+    ELSE.
+      GV_STR_02 = GW_ZSVF006-EBELN. "Purchase Order Number
+    ENDIF.
+    SHIFT GV_STR_02 LEFT DELETING LEADING '0'.
+    CONDENSE GV_STR_02.
+    GV_STR_03 = GW_ZSVF006-KTEXTMAT. "####
+    GV_STR_04 = GW_ZSVF006-CHARG. "###
+    CLEAR GV_DEPT_NAME.
+    SELECT SINGLE ZSVF_DEPT_NAME FROM ZSVF014
+      INTO (GV_DEPT_NAME) WHERE ZSVF_DEPT_ID = GW_ZSVF005_KOM-ZSVF_DEPT_ID.
+    GV_STR_05 = GV_DEPT_NAME. "####
+    GV_STR_06 = GW_PRINT_KEY-ZSVF_DOC_ID. "#### Version
+    SHIFT GV_STR_06 LEFT DELETING LEADING '0'.
+    CONCATENATE 'v' GV_STR_06 INTO GV_STR_06.
+    GV_STR_07 = GW_ZSVF006-PASTRTERM. "####
+    GV_STR_08 = GW_ZSVF006-SELMATNR. "###
+    SHIFT GV_STR_08 LEFT DELETING LEADING '0'.
+    MACRO_CONCATENATE_STRINGS GW_ZSVF005_KOM-ZSVF_SPLNAM SPACE.
+*----------------------------------------------------------------------*
+* Get SVF Mail Subject
+*----------------------------------------------------------------------*
+* 2015-04-08
+* [#####] PrcO:1221951_v2 (Lot#00025194:G320LBP_20_PF)
+    MACRO_CLEAR_STRINGS.
+    CONCATENATE '[' GV_DOC_TYPE_DESC ']' INTO GV_STR_01. "Doc Type
+    IF GW_ZSVF006-AUFNR IS NOT INITIAL.
+      GV_STR_02 = GW_ZSVF006-AUFNR. "Work Order Number
+      SHIFT GV_STR_02 LEFT DELETING LEADING '0'.
+      CONDENSE GV_STR_02.
+      CONCATENATE 'PrcO:' GV_STR_02 '_v' INTO GV_STR_02.
+    ELSEIF GW_ZSVF006-EBELN IS NOT INITIAL.
+      GV_STR_02 = GW_ZSVF006-EBELN. "Purchase Order Number
+      SHIFT GV_STR_02 LEFT DELETING LEADING '0'.
+      CONDENSE GV_STR_02.
+      CONCATENATE 'PO:' GV_STR_02 '_v' INTO GV_STR_02.
+    ELSE.
+      GV_STR_02 = 'v'.
+    ENDIF.
+    GV_STR_03 = GW_PRINT_KEY-ZSVF_DOC_ID. "#### Version
+    SHIFT GV_STR_03 LEFT DELETING LEADING '0'.
+    CONCATENATE GV_STR_02 GV_STR_03 INTO GV_STR_02.
+    CLEAR GV_STR_03.
+    GV_STR_03 = GW_ZSVF006-CHARG. "###
+    GV_STR_04 = GW_ZSVF006-KTEXTMAT. "####
+    CONCATENATE '(Lot#' GV_STR_03 ':' GV_STR_04 ')' INTO GV_STR_03.
+    CLEAR GV_STR_04.
+    MACRO_CONCATENATE_STRINGS GW_ZSVF005_KOM-ZSVF_MAILSJT SPACE.
+
+* Company code
+    GW_ZSVF005_KOM-BUKRS = GV_BUKRS.
+    APPEND GW_ZSVF005_KOM TO GT_ZSVF005_KOM.
+  ENDLOOP. "loop at gt_zsvf005
+
+* Create an entry in status table
+  CALL FUNCTION 'Z_SVF_STATUS_CREATE'
+    EXPORTING
+      ZSVF_DOC_TYPE          = GW_PRINT_KEY-ZSVF_DOC_TYPE
+      ZSVF_DOC_NUM           = GW_PRINT_KEY-ZSVF_DOC_NUM
+*     ZSVF_DOC_ITEM          =
+      ZSVF_DOC_ID            = GW_PRINT_KEY-ZSVF_DOC_ID
+    TABLES
+      IT_ZSVF005_KOM         = GT_ZSVF005_KOM
+      OT_PRINT_KEY           = GT_PRINT_KEY
+    EXCEPTIONS
+      INPUT_FIELD_IS_INITIAL = 1
+      OTHERS                 = 2.
+  IF SY-SUBRC <> 0.
+*    MESSAGE I998. "####
+*    LEAVE PROGRAM.
+    PERFORM FRM_PRINT_FAILED.
+  ELSE.
+    COMMIT WORK AND WAIT.
+  ENDIF.
+
+* Update Doc Header and Item tables
+* There would be a dump if failed, so no need to log and give message.
+  INSERT ZSVF006 FROM TABLE GT_ZSVF006.
+  INSERT ZSVF007 FROM TABLE GT_ZSVF007.
+  COMMIT WORK AND WAIT.
+
+* Unlock Doc ID of table ZSVF001
+  CALL FUNCTION 'Z_SVF_COPYID_DEQUEUE'
+    EXPORTING
+      I_DOC_TYPE            = GW_PRINT_KEY-ZSVF_DOC_TYPE
+      I_DOC_NUM             = GW_PRINT_KEY-ZSVF_DOC_NUM
+*     I_DOC_ITEM            =
+    EXCEPTIONS
+      EQUEUE_DOC_ID_FAILURE = 1
+      OTHERS                = 2.
+
+* Lock table ZSVF001 entries
+  LOOP AT GT_PRINT_KEY INTO GW_PRINT_KEY.
+    PERFORM FRM_LOCK_ZSVF001_DATA USING GW_PRINT_KEY
+                                  CHANGING GV_LOCKED.
+    IF GV_LOCKED <> 'X'.
+      PERFORM FRM_PRINT_FAILED.
+    ENDIF.
+  ENDLOOP.
+
+* update status table
+  LOOP AT GT_PRINT_KEY INTO GW_PRINT_KEY.
+    CALL FUNCTION 'Z_SVF_STATUS_CHANGE'
+      EXPORTING
+        PRINT_KEY            = GW_PRINT_KEY
+        ZSVF_PRTSTAT         = GC_STATUS_A0
+*       ZSVF_CHAGER          = SY-UNAME
+*       ZSVF_CHDDATE         = SY-DATUM
+      EXCEPTIONS
+        PRINT_KEY_INVALID    = 1
+        PRINT_STATUS_INVALID = 2
+        MODIFY_TABLE_ERROR   = 3
+        OTHERS               = 4.
+
+    IF SY-SUBRC <> 0.
+      MESSAGE ID SY-MSGID TYPE 'I' NUMBER SY-MSGNO
+              WITH SY-MSGV1 SY-MSGV2 SY-MSGV3 SY-MSGV4.
+      EXIT. "exit loop
+    ELSE.
+      COMMIT WORK AND WAIT.
+    ENDIF.
+  ENDLOOP.
+
+ENDFORM.                    " FRM_PROCESS_DATA
+*&---------------------------------------------------------------------*
+*&      Form  FRM_CONSTRUCT_DATA
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+*  -->  p1        text
+*  <--  p2        text
+*----------------------------------------------------------------------*
+FORM FRM_CONSTRUCT_DATA .
+* Inspection Lot
+
+* Header table
+  CLEAR: GW_ZSVF006, GT_ZSVF006[].
+* Primary Key
+  GW_ZSVF006-PRUEFLOS = QALS-PRUEFLOS.
+  GW_ZSVF006-ZSVF_DOC_ID = GW_PRINT_KEY-ZSVF_DOC_ID. "Copy ID
+* Key
+  GW_ZSVF006-WERKS = QALS-WERK.
+  GW_ZSVF006-PASTRTERM = QALS-PASTRTERM.
+  GW_ZSVF006-PAENDTERM = QALS-PAENDTERM.
+  GW_ZSVF006-SELMATNR = QALS-SELMATNR.
+  GW_ZSVF006-AUFNR = QALS-AUFNR.
+  GW_ZSVF006-CHARG = QALS-CHARG.
+
+  "##“#######”######
+  IF QALS-AUFNR IS NOT INITIAL.
+    GW_ZSVF006-ZSVF_ORD_TYPE = '######'.
+    GW_ZSVF006-ZSVF_ORD_NO = QALS-AUFNR.
+  ELSEIF QALS-EBELN IS NOT INITIAL.
+    GW_ZSVF006-ZSVF_ORD_TYPE = '######'.
+    CONCATENATE QALS-EBELN '/' QALS-EBELP INTO GW_ZSVF006-ZSVF_ORD_NO.
+  ELSE.
+    "do nothing
+  ENDIF.
+  GW_ZSVF006-ZSVF_CCADS = GV_STREET.
+  GW_ZSVF006-ZSVF_CCPIC = GV_ZSVF_CCPIC.
+
+* Material Description
+  IF QALS-KTEXTMAT IS NOT INITIAL.
+    GW_ZSVF006-KTEXTMAT = QALS-KTEXTMAT.
+  ELSE.
+    SELECT SINGLE MAKTX FROM MAKT
+      INTO (GW_ZSVF006-KTEXTMAT)
+      WHERE MATNR = QALS-SELMATNR.
+  ENDIF.
+
+  GW_ZSVF006-LOSMENGE = QALS-LOSMENGE.
+  GW_ZSVF006-MENGENEINH = QALS-MENGENEINH.
+  GW_ZSVF006-EBELN = QALS-EBELN.
+  GW_ZSVF006-EBELP = QALS-EBELP.
+  GW_ZSVF006-ZSVF_PDDEPT = GV_PDDEPT.
+  GW_ZSVF006-ZSVF_PDLINE = GV_PDLINE.
+* log
+  GW_ZSVF006-LOG_REPID = SY-REPID.
+  GW_ZSVF006-LOG_UNAME = SY-UNAME.
+  GW_ZSVF006-LOG_DATUM = SY-DATUM.
+  GW_ZSVF006-LOG_UZEIT = SY-UZEIT.
+
+  APPEND GW_ZSVF006 TO GT_ZSVF006.
+
+* Item table
+  CLEAR GT_ZSVF007[].
+  LOOP AT G_QAMVTAB INTO GW_QAMVTAB.
+    CLEAR GW_ZSVF007.
+* primary key
+    GW_ZSVF007-PRUEFLOS = QALS-PRUEFLOS.
+    GW_ZSVF007-ZSVF_DOC_ID = GW_PRINT_KEY-ZSVF_DOC_ID. "Copy ID
+* key
+    GW_ZSVF007-MERKNR = GW_QAMVTAB-MERKNR.
+    GW_ZSVF007-VERWMERKM = GW_QAMVTAB-VERWMERKM.
+    GW_ZSVF007-KURZTEXT = GW_QAMVTAB-KURZTEXT.
+
+    IF GW_QAMVTAB-KATAB1 <> 'X'. "X = ##########
+*    GW_ZSVF007-TOLERANZOB = GW_QAMVTAB-TOLERANZOB.
+*    GW_ZSVF007-TOLERANZUN = GW_QAMVTAB-TOLERANZUN.
+*    GW_ZSVF007-PLAUSIOBEN = GW_QAMVTAB-PLAUSIOBEN.
+*    GW_ZSVF007-PLAUSIUNTE = GW_QAMVTAB-PLAUSIUNTE.
+* Convert float to char
+*   &1 FLTP_VALUE
+*   &2 NUMBER_OF_DIGITS
+*   &3 VALUE NOT INITIAL IF SET
+*   &4 OUTPUT STRING
+      " Upper Specification Limit
+      MACRO_FLTP_TO_CHAR_2 GW_QAMVTAB-TOLERANZOB GW_QAMVTAB-STELLEN
+                           GW_QAMVTAB-TOLOBNI    GW_ZSVF007-TOLERANZOB.
+      " Lower Tolerance Limit
+      MACRO_FLTP_TO_CHAR_2 GW_QAMVTAB-TOLERANZUN GW_QAMVTAB-STELLEN
+                           GW_QAMVTAB-TOLUNNI    GW_ZSVF007-TOLERANZUN.
+      " Upper Plausibility Limit
+      MACRO_FLTP_TO_CHAR_2 GW_QAMVTAB-PLAUSIOBEN GW_QAMVTAB-STELLEN
+                           GW_QAMVTAB-PLAUSIOBNI GW_ZSVF007-PLAUSIOBEN.
+      " Lower Plausibility Limit
+      MACRO_FLTP_TO_CHAR_2 GW_QAMVTAB-PLAUSIUNTE GW_QAMVTAB-STELLEN
+                           GW_QAMVTAB-PLAUSIUNNI GW_ZSVF007-PLAUSIUNTE.
+    ENDIF.
+
+    MACRO_CONVERT_TO_MSEH6 GW_QAMVTAB-MASSEINHSW GW_ZSVF007-MSEH6.
+* Log
+    GW_ZSVF007-LOG_REPID = SY-REPID.
+    GW_ZSVF007-LOG_UNAME = SY-UNAME.
+    GW_ZSVF007-LOG_DATUM = SY-DATUM.
+    GW_ZSVF007-LOG_UZEIT = SY-UZEIT.
+
+    APPEND GW_ZSVF007 TO GT_ZSVF007.
+  ENDLOOP. "loop at G_QAMVTAB
+
+ENDFORM.                " FRM_CONSTRUCT_DATA
+*&---------------------------------------------------------------------*
+*&      Form  FRM_DECIDE_PRINTER
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+*  -->  p1        text
+*  <--  p2        text
+*----------------------------------------------------------------------*
+FORM FRM_DECIDE_PRINTER .
+
+* Decide printer
+  CALL FUNCTION 'Z_SVF_GET_PRINT_INFO'
+    EXPORTING
+      I_PRINT_KEY           = GW_PRINT_KEY
+      I_BUKRS               = GV_BUKRS
+      I_PDDEPT              = GV_PDDEPT
+      I_PDLINE              = GV_PDLINE
+      I_SLOC                = QALS-LAGORTCHRG
+*     I_PURGP               =
+*     I_PRCRID              =
+    TABLES
+      OT_ZSVF005            = GT_ZSVF005
+    EXCEPTIONS
+      NO_PRINT_CONFIG_FOUND = 1
+      NO_PRINTER_FOUND      = 2
+      OTHERS                = 3.
+
+  IF SY-SUBRC <> 0.
+* Message and leave the program
+    PERFORM FRM_PRINT_FAILED.
+  ENDIF.
+
+ENDFORM.                    " FRM_DECIDE_PRINTER
+*&---------------------------------------------------------------------*
+*&      Form  FRM_OUTPUT_DATA
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+*  -->  p1        text
+*  <--  p2        text
+*----------------------------------------------------------------------*
+FORM FRM_OUTPUT_DATA .
+
+  CLEAR GV_PRINT_EXCEPTION.
+
+  LOOP AT GT_PRINT_KEY INTO GW_PRINT_KEY.
+
+* Status B0 and C0.
+    CALL FUNCTION 'Z_SVF_SEND_PRINT_REQUEST'
+      EXPORTING
+        I_PRINT_KEY              = GW_PRINT_KEY
+        I_COMMIT                 = 'X'
+      TABLES
+        IT_DOC_HEADER            = GT_ZSVF006
+        IT_DOC_ITEM              = GT_ZSVF007
+      EXCEPTIONS
+        SEND_PRINT_REQUEST_ERROR = 1
+        PRINTER_NAME_ERROR       = 2
+        OTHERS                   = 3.
+    CASE SY-SUBRC.
+      WHEN 0.
+        PERFORM FRM_UNLOCK_ZSVF001_DATA  USING GW_PRINT_KEY.
+      WHEN 2.
+        MESSAGE S037 INTO GV_PRINT_EXCEPTION.
+      WHEN OTHERS.
+        PERFORM FRM_PRINT_FAILED.
+    ENDCASE.
+
+  ENDLOOP. "LOOP AT GT_PRINT_KEY
+
+ENDFORM.                    " FRM_OUTPUT_DATA
+*&---------------------------------------------------------------------*
+*&      Form  frm_unit_conversion_output
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+*  -->  p1        text
+*  <--  p2        text
+*----------------------------------------------------------------------*
+FORM FRM_UNIT_CONVERSION_OUTPUT  USING P_INPUT
+                                 CHANGING P_SHORT_TEXT.
+
+  CLEAR P_SHORT_TEXT.
+  CHECK P_INPUT IS NOT INITIAL.
+
+  "#########
+  CALL FUNCTION 'CONVERSION_EXIT_CUNIT_OUTPUT'
+    EXPORTING
+      INPUT          = P_INPUT
+*     language       = sy-langu
+    IMPORTING
+*     LONG_TEXT      =
+*     OUTPUT         =
+      SHORT_TEXT     = P_SHORT_TEXT
+    EXCEPTIONS
+      UNIT_NOT_FOUND = 1
+      OTHERS         = 2.
+
+  IF SY-SUBRC <> 0.
+    CLEAR P_SHORT_TEXT.
+  ENDIF.
+
+ENDFORM.
+*&---------------------------------------------------------------------*
+*&      Form  FRM_GET_PDDEPT_PDLINE
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+*  -->  p1        text
+*  <--  p2        text
+*----------------------------------------------------------------------*
+FORM FRM_GET_PDDEPT_PDLINE .
+
+  DATA: LV_APRIO TYPE CAUFVD-APRIO.
+
+  IF CAUFVD_TAB IS NOT INITIAL.
+    LV_APRIO = CAUFVD_TAB-APRIO.
+  ELSEIF GW_AFKO IS NOT INITIAL.
+    LV_APRIO = GW_AFKO-APRIO.
+  ENDIF.
+
+* Get Production Department and Production Line
+  CALL FUNCTION 'Z_SVF_GET_DEPT_AND_LINE'
+    EXPORTING
+      I_MATNR                 = QALS-SELMATNR
+*     I_CTYPE                 = '001'
+      I_WERKS                 = QALS-WERK
+      I_APRIO                 = LV_APRIO
+    IMPORTING
+      O_DEPT                  = GV_PDDEPT
+      O_LINE                  = GV_PDLINE
+    EXCEPTIONS
+      PLANT_IS_INVALID        = 1
+      NO_CLASSIFICATION_FOUND = 2
+      OTHERS                  = 3.
+
+  IF GV_PDDEPT IS INITIAL.
+* log
+    MACRO_SVF_LOG_WRITE GW_PRINT_KEY
+                        'I'           "message type
+                        '202'         "message number
+                        QALS-SELMATNR "message variant 1
+                        ''            "message variant 2
+                        ''            "message variant 3
+                        ''.           "message variant 4
+    "## & ###########
+    MESSAGE I202 WITH QALS-SELMATNR.
+  ENDIF.
+
+  IF GV_PDLINE IS INITIAL.
+* log
+    MACRO_SVF_LOG_WRITE GW_PRINT_KEY
+                        'I'           "message type
+                        '201'         "message number
+                        QALS-AUFNR    "message variant 1
+                        ''            "message variant 2
+                        ''            "message variant 3
+                        ''.           "message variant 4
+    "## & ######
+    MESSAGE I201 WITH QALS-AUFNR.
+  ENDIF.
+
+ENDFORM.                    " FRM_GET_PDDEPT_PDLINE
+*&---------------------------------------------------------------------*
+*&      Form  FRM_GET_BUKRS_INFO
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+*  -->  p1        text
+*  <--  p2        text
+*----------------------------------------------------------------------*
+FORM FRM_GET_BUKRS_INFO .
+
+  CALL FUNCTION 'Z_SVF_GET_BUKRS_INFO'
+    EXPORTING
+      I_DOC_TYPE   = GC_DOC_TYPE_IPLT
+      I_WERKS      = QALS-WERK
+*     I_BUKRS      =
+*     I_SPRAS      = SY-LANGU
+    IMPORTING
+      O_BUKRS      = GV_BUKRS
+      O_BUTXT      = GV_BUTXT
+      O_ZSVF_CCPIC = GV_ZSVF_CCPIC
+      O_STREET     = GV_STREET.
+
+ENDFORM.                    " FRM_GET_BUKRS_INFO
+*&---------------------------------------------------------------------*
+*&      Form  FRM_PRINT_FAILED
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+*  -->  p1        text
+*  <--  p2        text
+*----------------------------------------------------------------------*
+FORM FRM_PRINT_FAILED .
+
+* 2015-02-27 Leave program will release all the locks
+
+  LOOP AT GT_PRINT_KEY INTO GW_PRINT_KEY.
+    PERFORM FRM_UNLOCK_ZSVF001_DATA  USING GW_PRINT_KEY.
+  ENDLOOP.
+
+* ##### & ####
+  MESSAGE I602 WITH QALS-PRUEFLOS.
+  LEAVE PROGRAM.
+
+ENDFORM.                    " FRM_PRINT_FAILED

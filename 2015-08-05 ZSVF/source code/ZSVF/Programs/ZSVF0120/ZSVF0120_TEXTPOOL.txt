@@ -1,0 +1,10 @@
+Text-symbols
+B01	Selection Critiria
+M01	Program is already in execution.
+
+Selection-text
+SO_DATE	D       .
+SO_DNUM	D       .
+SO_DTYP	D       .
+SO_STAT	D       .
+SO_TIME	D       .

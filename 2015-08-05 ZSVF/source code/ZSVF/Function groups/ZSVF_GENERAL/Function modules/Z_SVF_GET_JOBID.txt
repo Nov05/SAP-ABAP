@@ -1,0 +1,115 @@
+FUNCTION Z_SVF_GET_JOBID.
+*"----------------------------------------------------------------------
+*"*"Local Interface:
+*"  IMPORTING
+*"     VALUE(I_PRINT_KEY) TYPE  ZSVF001_KEY
+*"     VALUE(I_SPRAS) TYPE  SPRAS OPTIONAL
+*"     VALUE(I_LABLTYPE) TYPE  ZSVF_LABLTYPE OPTIONAL
+*"     VALUE(I_LABLVER) TYPE  ZSVF_LABLVER OPTIONAL
+*"  EXPORTING
+*"     VALUE(O_JOBID) TYPE  ZSVF_JOBID
+*"  EXCEPTIONS
+*"      SVF_JOBID_NOT_FOUND
+*"----------------------------------------------------------------------
+* Log:
+* 2014-10-28 This function is created by Arwen.
+*            I_PRINT_KEY is only for logging use here;
+*            SPRAS is for Purchase Order only;
+*            LABLTYPE, LABLVER is for Label Printing only
+*-----------------------------------------------------------------------
+  DATA: LV_DOC_TYPE     TYPE ZSVF001_KEY-ZSVF_DOC_TYPE,
+        LV_BUKRS        TYPE ZSVF001-BUKRS,
+        LV_ZSVF_PRTTYPE TYPE ZSVF015-ZSVF_PRTTYPE,
+        LW_ZSVF001      TYPE ZSVF001,
+        LW_ZSVF015      TYPE ZSVF015.
+
+  CLEAR O_JOBID.
+  LV_DOC_TYPE = I_PRINT_KEY-ZSVF_DOC_TYPE.
+
+  SELECT SINGLE * FROM ZSVF001 INTO LW_ZSVF001
+    WHERE ZSVF_DOC_TYPE = I_PRINT_KEY-ZSVF_DOC_TYPE
+    AND ZSVF_DOC_NUM = I_PRINT_KEY-ZSVF_DOC_NUM
+    AND ZSVF_DOC_ITEM = I_PRINT_KEY-ZSVF_DOC_ITEM
+    AND ZSVF_DOC_ID = I_PRINT_KEY-ZSVF_DOC_ID
+    AND ZSVF_PRT_NO = I_PRINT_KEY-ZSVF_PRT_NO.
+
+  IF SY-SUBRC <> 0.
+* Log
+    MACRO_SVF_LOG_WRITE I_PRINT_KEY "Print request Key
+                        'E'    "Message Type
+                        '036'  "Message Number
+                        '' "Message Variant 1
+                        '' "Message Variant 2
+                        '' "Message Variant 3
+                        ''. "Message Variant 4
+    "## Job ID#Print Request Key ########
+    MESSAGE S036(ZSVF) RAISING SVF_JOBID_NOT_FOUND.
+  ELSE.
+    LV_BUKRS = LW_ZSVF001-BUKRS.
+  ENDIF.
+
+  SELECT SINGLE * FROM ZSVF015 INTO LW_ZSVF015
+    WHERE ZSVF_DOC_TYPE = I_PRINT_KEY-ZSVF_DOC_TYPE
+    AND ZSVF_DOC_NUM = I_PRINT_KEY-ZSVF_DOC_NUM
+    AND ZSVF_DOC_ITEM = I_PRINT_KEY-ZSVF_DOC_ITEM
+    AND ZSVF_DOC_ID = I_PRINT_KEY-ZSVF_DOC_ID
+    AND ZSVF_PRT_NO = I_PRINT_KEY-ZSVF_PRT_NO.
+
+  IF SY-SUBRC <> 0 OR LW_ZSVF015-ZSVF_PRTTYPE IS INITIAL.
+* Log
+    MACRO_SVF_LOG_WRITE I_PRINT_KEY "Print request Key
+                        'E'    "Message Type
+                        '025'  "Message Number
+                        '' "Message Variant 1
+                        '' "Message Variant 2
+                        '' "Message Variant 3
+                        ''. "Message Variant 4
+    "## Job ID############### ZSVF018
+    MESSAGE S025(ZSVF) RAISING SVF_JOBID_NOT_FOUND.
+  ELSE.
+    LV_ZSVF_PRTTYPE = LW_ZSVF015-ZSVF_PRTTYPE.
+  ENDIF.
+
+  CASE LV_DOC_TYPE.
+    WHEN GC_DOC_TYPE_PURO. "Purchasing Order
+      SELECT SINGLE ZSVF_JOBID
+        FROM ZSVF018
+        INTO (O_JOBID)
+        WHERE ZSVF_DOC_TYPE = LV_DOC_TYPE
+        AND BUKRS = LV_BUKRS
+        AND SPRAS = I_SPRAS
+        AND ZSVF_PRTTYPE = LV_ZSVF_PRTTYPE.
+
+    WHEN GC_DOC_TYPE_LAPT. "Process Order Label
+      SELECT SINGLE ZSVF_JOBID
+        FROM ZSVF018
+        INTO (O_JOBID)
+        WHERE ZSVF_DOC_TYPE = LV_DOC_TYPE
+        AND BUKRS = LV_BUKRS
+        AND ZSVF_LABLTYPE = I_LABLTYPE
+        AND ZSVF_LABLVER = I_LABLVER
+        AND ZSVF_PRTTYPE = LV_ZSVF_PRTTYPE.
+
+    WHEN OTHERS.
+      SELECT SINGLE ZSVF_JOBID
+        FROM ZSVF018
+        INTO (O_JOBID)
+        WHERE ZSVF_DOC_TYPE = LV_DOC_TYPE
+        AND BUKRS = LV_BUKRS
+        AND ZSVF_PRTTYPE = LV_ZSVF_PRTTYPE.
+  ENDCASE.
+
+  IF O_JOBID IS INITIAL.
+* Log
+    MACRO_SVF_LOG_WRITE I_PRINT_KEY "Print request Key
+                        'E'    "Message Type
+                        '023'  "Message Number
+                        LV_DOC_TYPE "Message Variant 1
+                        LV_BUKRS "Message Variant 2
+                        LW_ZSVF015-ZSVF_PRTTYPE "Message Variant 3
+                        ''. "Message Variant 4
+    "## Job ID#### SVF Job ID####### ZSVF018
+    MESSAGE S023(ZSVF) RAISING SVF_JOBID_NOT_FOUND.
+  ENDIF.
+
+ENDFUNCTION.

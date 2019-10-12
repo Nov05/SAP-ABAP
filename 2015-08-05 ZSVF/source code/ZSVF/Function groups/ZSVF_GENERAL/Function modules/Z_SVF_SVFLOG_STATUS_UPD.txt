@@ -1,0 +1,197 @@
+FUNCTION Z_SVF_SVFLOG_STATUS_UPD.
+*"----------------------------------------------------------------------
+*"*"Local Interface:
+*"  IMPORTING
+*"     VALUE(I_SVFLOG_FILENAME) OPTIONAL
+*"  TABLES
+*"      IT_SVFLOG
+*"  EXCEPTIONS
+*"      SVFLOG_EMPTY_FILE
+*"      SVGLOG_CONTAINS_ERROR
+*"----------------------------------------------------------------------
+* Change Log:
+* 1. 2014-09-23 This function module is created by Arwen.
+* 2. 2014-11-04 Log field opKind = Print, ####### Print #####
+*               resultCode = 0, ######## 0 ######D0
+* 3. 2015-02-28 opKind = Delete, SVF spool ####resultCode = 0, D1
+*----------------------------------------------------------------------*
+  DATA: LT_FIELD              TYPE TABLE OF STRING,
+        LT_HEADER             TYPE TABLE OF STRING,
+        LV_SVFLOG_LINE_NUMBER TYPE SY-TABIX,
+        LV_LINES              TYPE I,
+        LV_ERROR_FLAG         TYPE C,
+* For update status table ZSVF001
+        LV_CSV_FILENAME       TYPE STRING,
+        LW_PRINT_KEY          TYPE ZSVF001_KEY,
+        LV_RESULTCODE         TYPE STRING,
+        LV_OPKIND             TYPE STRING,
+        LV_PRTSTAT            TYPE ZSVF_PRTSTAT,
+* others
+        LV_FOUND              TYPE I,
+        LV_TABIX              TYPE I,
+        LV_KEYLEN             TYPE I, "file without extension length
+        LV_EXTLEN             TYPE I. "file extension length
+
+  FIELD-SYMBOLS: <LFS_SVFLOG> TYPE STRING,
+                 <LFS_FIELD>  TYPE STRING,
+                 <LFS_HEADER> TYPE STRING.
+
+*----------------------------------------------------------------------*
+* Check Input
+*----------------------------------------------------------------------*
+  DESCRIBE TABLE IT_SVFLOG LINES LV_LINES.
+  IF LV_LINES <= 1.
+* 2015-02-28 SVF ###################
+* Log: SVF Log ## & ##
+*    MACRO_SVF_LOG_WRITE LW_PRINT_KEY "Print request Key
+*                        'S' "Message Type
+*                        '021' "Message Number
+*                        I_SVFLOG_FILENAME "Message Variant 1
+*                        '' "Message Variant 2
+*                        '' "Message Variant 3
+*                        ''. "Message Variant 4
+    MESSAGE S021(ZSVF) WITH I_SVFLOG_FILENAME
+                       RAISING SVFLOG_EMPTY_FILE.
+  ENDIF.
+
+*----------------------------------------------------------------------*
+* Process SVF Log Data
+*----------------------------------------------------------------------*
+  LOOP AT IT_SVFLOG ASSIGNING <LFS_SVFLOG>.
+    LV_SVFLOG_LINE_NUMBER = SY-TABIX.
+
+    CLEAR LT_FIELD[].
+    SPLIT <LFS_SVFLOG> AT GC_LOG_SEPERATOR INTO TABLE LT_FIELD.
+
+    IF GC_LOG_SEPERATOR = '","'.
+      CLEAR LV_LINES.
+      DESCRIBE TABLE LT_FIELD LINES LV_LINES.
+
+      "Remove the first " of the line
+      READ TABLE LT_FIELD ASSIGNING <LFS_FIELD> INDEX 1.
+      IF SY-SUBRC = 0.
+        SHIFT <LFS_FIELD> LEFT DELETING LEADING '"'.
+      ENDIF.
+
+      "Remove the last " of the line
+      READ TABLE LT_FIELD ASSIGNING <LFS_FIELD> INDEX LV_LINES.
+      IF SY-SUBRC = 0.
+        SHIFT <LFS_FIELD> RIGHT DELETING TRAILING '"'.
+      ENDIF.
+    ENDIF.
+
+* Log Header
+    IF LV_SVFLOG_LINE_NUMBER = 1.
+      CLEAR LT_HEADER[].
+      LT_HEADER[] = LT_FIELD[].
+      LOOP AT LT_HEADER ASSIGNING <LFS_HEADER>.
+        CONDENSE <LFS_HEADER> NO-GAPS.
+        TRANSLATE <LFS_HEADER> TO UPPER CASE.
+      ENDLOOP.
+
+* Log body
+    ELSE. "IF LV_SVFLOG_LINE_NUMBER <> 1.
+      CLEAR: LV_CSV_FILENAME,
+             LW_PRINT_KEY,
+             LV_PRTSTAT,
+             LV_FOUND,
+             LV_TABIX.
+
+      LOOP AT LT_HEADER ASSIGNING <LFS_HEADER>.
+        LV_TABIX = SY-TABIX.
+
+        IF LV_FOUND >= 3. "All the 3 fields have been read.
+          EXIT. "exit loop
+        ENDIF.
+
+        CASE <LFS_HEADER>.
+          WHEN 'COMPUTERNAME'.
+            LV_FOUND = LV_FOUND + 1.
+            READ TABLE LT_FIELD ASSIGNING <LFS_FIELD> INDEX LV_TABIX.
+            IF SY-SUBRC = 0.
+* Get CSV file name
+              CONDENSE <LFS_FIELD> NO-GAPS.
+              TRANSLATE <LFS_FIELD> TO UPPER CASE.
+              LV_CSV_FILENAME = <LFS_FIELD>.
+* Get Print Request Key
+              LV_EXTLEN = STRLEN( GC_EXTENSION_CSV ).
+              LV_KEYLEN = STRLEN( <LFS_FIELD> ) - LV_EXTLEN.
+              IF LV_KEYLEN < 36.
+                LW_PRINT_KEY+0(LV_KEYLEN) = <LFS_FIELD>+0(LV_KEYLEN).
+                "#######ZSVF_PRT_NO Type Char4### Type Numc4
+                IF LV_KEYLEN > 32.
+                  LW_PRINT_KEY-ZSVF_PRT_NO = <LFS_FIELD>+32.
+                ENDIF.
+              ELSE.
+                LW_PRINT_KEY = <LFS_FIELD>+0(36).
+              ENDIF.
+            ENDIF.
+* Decide Status
+          WHEN 'RESULTCODE'.
+            LV_FOUND = LV_FOUND + 1.
+            READ TABLE LT_FIELD ASSIGNING <LFS_FIELD> INDEX LV_TABIX.
+            IF SY-SUBRC = 0.
+              LV_RESULTCODE = <LFS_FIELD>.
+            ENDIF.
+* Operation Type
+          WHEN 'OPKIND'.
+            LV_FOUND = LV_FOUND + 1.
+            READ TABLE LT_FIELD ASSIGNING <LFS_FIELD> INDEX LV_TABIX.
+            IF SY-SUBRC = 0.
+              LV_OPKIND = <LFS_FIELD>.
+              CONDENSE LV_OPKIND.
+              TRANSLATE LV_OPKIND TO UPPER CASE.
+            ENDIF.
+        ENDCASE.
+      ENDLOOP. "LOOP AT LT_HEADER
+
+      CHECK LV_CSV_FILENAME IS NOT INITIAL.
+      CHECK LV_RESULTCODE = '0'.
+
+      CASE LV_OPKIND.
+        WHEN GC_OPKIND_PRINT.
+          LV_PRTSTAT = GC_STATUS_PRINTED.
+        WHEN GC_OPKIND_DELETE.
+          LV_PRTSTAT = GC_STATUS_DELETED.
+        WHEN OTHERS.
+          CONTINUE. "LOOP AT IT_SVFLOG
+      ENDCASE.
+
+* Update status table
+      CALL FUNCTION 'Z_SVF_STATUS_CHANGE'
+        EXPORTING
+          PRINT_KEY            = LW_PRINT_KEY
+          ZSVF_PRTSTAT         = LV_PRTSTAT
+*         ZSVF_CHAGER          = SY-UNAME
+*         ZSVF_CHDDATE         = SY-DATUM
+        EXCEPTIONS
+          PRINT_KEY_INVALID    = 1
+          PRINT_STATUS_INVALID = 2
+          MODIFY_TABLE_ERROR   = 3
+          OTHERS               = 4.
+      CASE SY-SUBRC.
+        WHEN 0.
+          COMMIT WORK AND WAIT. "Please remember to do this explicitly.
+        WHEN 1.
+          "Message ZSVF005:
+          "## SVF Log### Print Request Key#SVF Log &#Line &#File &
+          MACRO_SVF_LOG_WRITE LW_PRINT_KEY
+                              'E'    "message type
+                              '005'  "message number
+                              I_SVFLOG_FILENAME
+                              LV_SVFLOG_LINE_NUMBER
+                              LV_CSV_FILENAME
+                              ''.
+          MESSAGE S005(ZSVF) WITH I_SVFLOG_FILENAME
+                              LV_SVFLOG_LINE_NUMBER
+                              LV_CSV_FILENAME
+                              DISPLAY LIKE 'E'.
+      ENDCASE. "case sy-subrc
+    ENDIF. "IF LV_SVFLOG_LINE_NUMBER = 1, whether it is a table head or body
+  ENDLOOP. "LOOP AT IT_SVFLOG
+
+  IF LV_ERROR_FLAG = 'X'.
+    RAISE SVGLOG_CONTAINS_ERROR.
+  ENDIF.
+
+ENDFUNCTION.

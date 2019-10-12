@@ -1,0 +1,105 @@
+***********************************************************************
+* Project Name : Daikin DCC Upgrading - SVF
+* Program Name : ZSVF0120
+* Description  : SVF Batch Process Print Request with Errors
+* Date/Autohr  : 2014-10-13 / 2JZHA
+***********************************************************************
+* M O D I F I C A T I O N  L O G
+***********************************************************************
+* ChangeDate  Programmer  Request     Description
+* ==========  ==========  ==========  =================================
+* 2014-10-13  2JZHA       CA1K900047  2014_SVF_Wave1 Repository Object
+***********************************************************************
+* Process:
+*	1. Initialization
+*	2. Get the data that is needed from table ZSVF001,
+*	4. Send the CSV files to SVF
+*   (status table ZSVF001 will be updated,
+*    status will be set to C0 if succeed)
+*	5. ALV displaying the result
+
+REPORT ZSVF0120 MESSAGE-ID ZSVF.
+
+INCLUDE ZSVF_TOP01.
+INCLUDE ZSVF_TOP02.
+INCLUDE ZSVF0120_TOP.   "Global Variable
+*======================================================================*
+*  Selection Screen
+*======================================================================*
+SELECTION-SCREEN BEGIN OF BLOCK BLK01 WITH FRAME TITLE TEXT-B01.
+SELECT-OPTIONS: SO_DTYP FOR ZSVF001-ZSVF_DOC_TYPE,
+                SO_DNUM FOR ZSVF001-ZSVF_DOC_NUM,
+                SO_DATE FOR ZSVF001-LOG_DATUM,
+                SO_TIME FOR ZSVF001-LOG_UZEIT,
+                SO_STAT FOR ZSVF001-ZSVF_PRTSTAT.
+SELECTION-SCREEN END OF BLOCK BLK01.
+*======================================================================*
+*  Includes
+*======================================================================*
+*** Global Data Declear
+*INCLUDE ZSVF0010_c01.  "Class Definition
+*INCLUDE ZSVF0010_o01.  "PBO
+*INCLUDE ZSVF0010_i01.  "PAI
+INCLUDE ZSVF0120_F01.   "Subroutine(FORMS)
+*======================================================================*
+*  Selection Screen Events
+*======================================================================*
+*** Maintain Selection Screen Output
+*AT SELECTION-SCREEN OUTPUT.
+
+*** F4 Value Help
+*AT SELECTION-SCREEN ON VALUE-REQUEST FOR p_path.
+*  PERFORM frm_f4_path CHANGING p_path.
+
+*** Check Input Data
+*AT SELECTION-SCREEN.
+
+*AT SELECTION-SCREEN ON <f>.
+*AT SELECTION-SCREEN ON BLOCK <>.
+****CHECK ON SELECT SCREEN INPUT
+
+*======================================================================*
+*  Report events
+*======================================================================*
+*** initial data
+INITIALIZATION.
+  PERFORM FRM_INITIALIZATION.
+
+AT SELECTION-SCREEN.
+
+*** Prepare Report Data
+START-OF-SELECTION.
+* Lock program
+  CONCATENATE SY-MANDT SY-CPROG INTO GV_PROGRAM.
+  PERFORM FRM_LOCK_PROGRAM USING GV_PROGRAM
+                           CHANGING GV_PROGRAM_LOCKED.
+  IF GV_PROGRAM_LOCKED <> 'X'.
+    MESSAGE S000 WITH TEXT-M01 DISPLAY LIKE 'E'.
+    LEAVE LIST-PROCESSING.
+  ENDIF.
+
+  PERFORM FRM_GET_DATA.
+  PERFORM FRM_PROCESS_DATA.
+
+END-OF-SELECTION.
+  PERFORM FRM_DISPLAY_DATA.
+
+* Unlock program
+  PERFORM FRM_UNLOCK_PROGRAM USING GV_PROGRAM.
+*======================================================================*
+*  List events
+*======================================================================*
+*** Page header
+*TOP-OF-PAGE.
+
+*** Page Header After First List
+*TOP-OF-PAGE DURING LINE-SELECTION.
+
+*** Page Footer
+*END-OF-PAGE.
+
+*** When Double Click
+*AT LINE-SELECTION.
+
+*** When Click Some Icon (function code)
+*AT USER-COMMAND.

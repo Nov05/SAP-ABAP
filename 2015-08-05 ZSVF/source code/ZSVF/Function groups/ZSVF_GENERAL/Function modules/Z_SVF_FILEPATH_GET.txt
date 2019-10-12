@@ -1,0 +1,84 @@
+FUNCTION Z_SVF_FILEPATH_GET .
+*"----------------------------------------------------------------------
+*"*"Local Interface:
+*"  IMPORTING
+*"     VALUE(I_DOC_TYPE)
+*"     VALUE(I_FILE_NAME) OPTIONAL
+*"  EXPORTING
+*"     VALUE(O_FILEPATH) TYPE  PATHEXTERN
+*"     VALUE(O_LOGICAL_PATH) TYPE  FILENAME-FILEINTERN
+*"  EXCEPTIONS
+*"      GET_FILEPATH_ERROR
+*"----------------------------------------------------------------------
+* Change Log:
+* 1. 2014-09-19 Created by Arwen Liu
+*#FILE# Logical Path
+* ZSVF_GRPO	Store GR for PO CSV file
+* ZSVF_IPLT	Store Inspection Lot CSV file
+* ZSVF_LAPT	Store PTFE Label CSV file
+* ZSVF_LOG  Store SVF print result log
+* ZSVF_LOG_HIS
+* ZSVF_LOG_ERR
+* ZSVF_PRSO	Store Process Order CSV file
+* ZSVF_PURO	Store Purchasing Order CSV file
+* ZSVF_ROOT	SVF ROOT
+* ZSVF_JAR  Store SVF .jar file
+*----------------------------------------------------------------------*
+* 2. 2015-03-04 Changed by Arwen Liu
+* ZSVF_CSV  Store CSV files for all Document Types
+* ZSVF_LOG  Store SVF print result log
+* ZSVF_LOG_HIS
+* ZSVF_LOG_ERR
+* ZSVF_ROOT	SVF ROOT
+* ZSVF_JAR  Store SVF .jar file
+*----------------------------------------------------------------------*
+  DATA: LV_LOGICAL_PATH        TYPE FILENAME-FILEINTERN,
+        LV_FILE_FORMAT         TYPE FILENAME-FILEFORMAT,
+        LV_FILE_NAME_WITH_PATH TYPE STRING.
+
+  CONSTANTS: LC_ASTERISK TYPE C VALUE '*'.
+
+  CLEAR: O_FILEPATH,
+         O_LOGICAL_PATH.
+
+* Get logcial path
+  CALL FUNCTION 'Z_SVF_LOGICAL_PATH_GET'
+    EXPORTING
+      I_DOC_TYPE     = I_DOC_TYPE
+    IMPORTING
+      O_LOGICAL_PATH = LV_LOGICAL_PATH.
+
+* Output
+  O_LOGICAL_PATH = LV_LOGICAL_PATH.
+
+* Get physical path
+  CALL FUNCTION 'FILE_GET_NAME_USING_PATH'
+    EXPORTING
+*     CLIENT                     = SY-MANDT
+      LOGICAL_PATH               = LV_LOGICAL_PATH
+*     OPERATING_SYSTEM           = SY-OPSYS
+*     PARAMETER_1                = ' '
+*     PARAMETER_2                = ' '
+*     PARAMETER_3                = ' '
+*     USE_BUFFER                 = ' '
+      FILE_NAME                  = LC_ASTERISK
+*     USE_PRESENTATION_SERVER    = ' '
+*     ELEMINATE_BLANKS           = 'X'
+    IMPORTING
+      FILE_NAME_WITH_PATH        = LV_FILE_NAME_WITH_PATH
+    EXCEPTIONS
+      PATH_NOT_FOUND             = 1
+      MISSING_PARAMETER          = 2
+      OPERATING_SYSTEM_NOT_FOUND = 3
+      FILE_SYSTEM_NOT_FOUND      = 4
+      OTHERS                     = 5.
+
+  IF SY-SUBRC <> 0.
+    RAISE GET_FILEPATH_ERROR.
+  ENDIF.
+
+  REPLACE FIRST OCCURRENCE OF LC_ASTERISK IN LV_FILE_NAME_WITH_PATH WITH I_FILE_NAME.
+  CONDENSE LV_FILE_NAME_WITH_PATH.
+  O_FILEPATH = LV_FILE_NAME_WITH_PATH.
+
+ENDFUNCTION.

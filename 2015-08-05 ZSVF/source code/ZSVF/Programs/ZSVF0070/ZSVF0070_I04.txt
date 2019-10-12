@@ -1,0 +1,31 @@
+*&---------------------------------------------------------------------*
+*&  Include           ZSVF0070_I04
+*&---------------------------------------------------------------------*
+
+*----------------------------------------------------------------------*
+* Send Print Request to SVF
+*----------------------------------------------------------------------*
+LOOP AT LT_PRINT_KEY INTO LW_PRINT_KEY.
+
+  CALL FUNCTION 'Z_SVF_SEND_PRINT_REQUEST'
+    EXPORTING
+      I_PRINT_KEY              = LW_PRINT_KEY
+      I_COMMIT                 = ' ' "Do not commit!
+    TABLES
+      IT_DOC_HEADER            = LT_ZSVF008
+      IT_DOC_ITEM              = LT_ZSVF009
+    EXCEPTIONS
+      SEND_PRINT_REQUEST_ERROR = 1
+      PRINTER_NAME_ERROR       = 2
+      OTHERS                   = 3.
+
+  CASE SY-SUBRC.
+    WHEN 0. "do nothing
+      PERFORM FRM_UNLOCK_ZSVF001_DATA USING LW_PRINT_KEY.
+    WHEN 2.
+      MESSAGE S037 INTO GV_PRINT_EXCEPTION.
+    WHEN OTHERS.
+      MACRO_PRINT_FAILED.
+  ENDCASE.
+
+ENDLOOP. "LOOP AT LT_PRINT_KEY

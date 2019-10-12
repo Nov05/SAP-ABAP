@@ -1,0 +1,57 @@
+*&---------------------------------------------------------------------*
+*&  ##                ZSVF0070_TOP
+*&---------------------------------------------------------------------*
+
+TABLES: NAST, TNAPR.
+
+DATA: ENT_RETCO,
+      ENT_SCREEN.
+
+DATA: DRUVO       LIKE T166K-DRUVO,
+      FROM_MEMORY,
+      DOC         TYPE MEEIN_PURCHASE_DOC_PRINT,
+      TOA_DARA    TYPE TOA_DARA,
+      ARC_PARAMS  TYPE ARC_PARAMS.
+
+DATA: GV_MSG_V1              TYPE SY-MSGV1,
+      GV_PRINT_EXCEPTION(50) TYPE C.
+
+DEFINE MACRO_PRINT_FAILED.
+* Unlock copy ID
+  READ TABLE LT_PRINT_KEY INTO LW_PRINT_KEY INDEX 1.
+  IF SY-SUBRC = 0.
+    CALL FUNCTION 'Z_SVF_COPYID_DEQUEUE'
+      EXPORTING
+        I_DOC_TYPE            = LW_PRINT_KEY-ZSVF_DOC_TYPE
+        I_DOC_NUM             = LW_PRINT_KEY-ZSVF_DOC_NUM
+      EXCEPTIONS
+        EQUEUE_DOC_ID_FAILURE = 1
+        OTHERS                = 2.
+  ENDIF.
+
+* Unlock print keys
+  LOOP AT  LT_PRINT_KEY into LW_PRINT_KEY.
+    PERFORM FRM_UNLOCK_ZSVF001_DATA USING LW_PRINT_KEY.
+  ENDLOOP.
+
+* SVF401: #### & ######
+    GV_MSG_V1 = DOC-XEKKO-EBELN.
+    SHIFT GV_MSG_V1 LEFT DELETING LEADING '0'.
+    CALL FUNCTION 'NAST_PROTOCOL_UPDATE'
+      EXPORTING
+        MSG_ARBGB              = 'ZSVF'
+        MSG_NR                 = '401'
+        MSG_TY                 = 'E'
+        MSG_V1                 = GV_MSG_V1
+*   MSG_V2                 =
+*   MSG_V3                 =
+*   MSG_V4                 =
+      EXCEPTIONS
+        MESSAGE_TYPE_NOT_VALID = 1
+        NO_SY_MESSAGE          = 2
+        OTHERS                 = 3.
+
+    ENT_RETCO = '2'.
+    RETURN. "Exit Form
+
+END-OF-DEFINITION.

@@ -1,0 +1,8 @@
+*---------------------------------------------------------------------*
+*    view related FORM routines
+*   generation date: 2015/04/08 at 19:43:18
+*   view maintenance generator version: #001407#
+*---------------------------------------------------------------------*
+
+* base table related FORM-routines.............
+INCLUDE LSVIMFTX .

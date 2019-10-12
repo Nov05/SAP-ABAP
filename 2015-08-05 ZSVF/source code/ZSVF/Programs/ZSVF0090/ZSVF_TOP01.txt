@@ -1,0 +1,113 @@
+*&---------------------------------------------------------------------*
+*&  Include           ZSVF_TOP01
+*&---------------------------------------------------------------------*
+***********************************************************************
+* Project Name : Daikin DCC Upgrading - SVF
+* Program Name : Include ZSVF_TOP01
+* Description  : General Variants
+* Date/Autohr  : 2014-09-19 / Arwen Liu
+***********************************************************************
+* M O D I F I C A T I O N  L O G
+***********************************************************************
+* ChangeDate  Programmer  Request     Description
+* ==========  ==========  ==========  =================================
+*
+***********************************************************************
+CONSTANTS: GC_PO_PREVIEW_MODE_ON  TYPE C VALUE 'X', "Purchase Order Preview Enabled
+           GC_PO_PREVIEW_MODE_OFF TYPE C VALUE ' ',
+           GC_CSV_DEL_MODE_ON     TYPE C VALUE 'X', "CSV File Will Be Deleted after Sending
+           GC_CSV_DEL_MODE_OFF    TYPE C VALUE ' '.
+
+* Global Control fields
+DATA: GV_PO_PREVIEW_MODE     TYPE C VALUE GC_PO_PREVIEW_MODE_OFF,
+      GV_CSV_DEL_MODE        TYPE C VALUE GC_CSV_DEL_MODE_ON,
+      GV_SVF_LOG_DELETE      TYPE C VALUE 'X',
+      "If value set, then log in table ZSVF013 will be in the language set;
+      "If not set, log will be in system language
+      GV_LOG_LANGU           TYPE SY-LANGU VALUE 'J',
+      GV_DOC_TYPE_DESC_LANGU TYPE SY-LANGU VALUE '1'. "Language of Doc Type Desc in Spool Name
+
+* Table
+TABLES: ZSVF001, EKKO.
+
+* Document Type
+CONSTANTS: GC_DOC_TYPE_PURO       TYPE ZSVF_DOC_TYPE VALUE 'PURO', "Purchasing Order
+           GC_DOC_TYPE_GRPO       TYPE ZSVF_DOC_TYPE VALUE 'GRPO', "GR for PO
+           GC_DOC_TYPE_PRSO       TYPE ZSVF_DOC_TYPE VALUE 'PRSO', "Production Order
+           GC_DOC_TYPE_IPLT       TYPE ZSVF_DOC_TYPE VALUE 'IPLT', "Inspection Instruction
+           GC_DOC_TYPE_LAPT       TYPE ZSVF_DOC_TYPE VALUE 'LAPT', "Label
+           " Constants below are not doc types, but only for getting physical path by logical path
+           GC_DOC_TYPE_CSV(3)     TYPE C VALUE 'CSV',
+           GC_DOC_TYPE_LOG(3)     TYPE C VALUE 'LOG',
+           GC_DOC_TYPE_LOG_HIS(7) TYPE C VALUE 'LOG_HIS',
+           GC_DOC_TYPE_LOG_ERR(7) TYPE C VALUE 'LOG_ERR',
+           GC_DOC_TYPE_JAR(3)     TYPE C VALUE 'JAR'. "e.g. D:\SVF\CallJARTest.jar
+
+* Logical Path
+CONSTANTS: GC_LPATH_ROOT    TYPE PATHINTERN VALUE 'ZSVF_ROOT',      "Root
+           GC_LPATH_LOG     TYPE PATHINTERN VALUE 'ZSVF_LOG',       "Log
+           GC_LPATH_LOG_HIS TYPE PATHINTERN VALUE 'ZSVF_LOG_HIS',   "Log History
+           GC_LPATH_LOG_ERR TYPE PATHINTERN VALUE 'ZSVF_LOG_ERR',   "Log Error
+           "Caution: If more doc types are created in the future, please still follow
+           "         the naming convention, e.g. GC_LPATH_<doc type>.
+*           GC_LPATH_PURO    TYPE PATHINTERN VALUE 'ZSVF_PURO',      "Purchasing Order
+*           GC_LPATH_GRPO    TYPE PATHINTERN VALUE 'ZSVF_GRPO',      "GR for PO
+*           GC_LPATH_PRSO    TYPE PATHINTERN VALUE 'ZSVF_PRSO',      "Production Order
+*           GC_LPATH_IPLT    TYPE PATHINTERN VALUE 'ZSVF_IPLT',      "Inspection Instruction
+*           GC_LPATH_LAPT    TYPE PATHINTERN VALUE 'ZSVF_LAPT'.      "Label
+           "Now all CSV will be stored in the same folder before sending
+           GC_LPATH_PURO    TYPE PATHINTERN VALUE 'ZSVF_CSV',      "Purchasing Order
+           GC_LPATH_GRPO    TYPE PATHINTERN VALUE 'ZSVF_CSV',      "GR for PO
+           GC_LPATH_PRSO    TYPE PATHINTERN VALUE 'ZSVF_CSV',      "Production Order
+           GC_LPATH_IPLT    TYPE PATHINTERN VALUE 'ZSVF_CSV',      "Inspection Instruction
+           GC_LPATH_LAPT    TYPE PATHINTERN VALUE 'ZSVF_CSV'.      "Label
+
+* File Extensions
+CONSTANTS: GC_EXTENSION_LOG(4) TYPE C VALUE '.CSV',
+           GC_EXTENSION_TXT(4) TYPE C VALUE '.TXT',
+           "Caution: SVF can only recognize lower-cased ext name!
+           GC_EXTENSION_CSV(4) TYPE C VALUE '.csv'.
+
+* CSV Seperator
+CONSTANTS: GC_CSV_SEPERATOR(1)   TYPE C VALUE CL_ABAP_CHAR_UTILITIES=>HORIZONTAL_TAB,
+           GC_LOG_SEPERATOR(3)   TYPE C VALUE '","',
+           GC_LABEL_SEPERATOR(1) TYPE C VALUE ','.
+
+* Message ID
+CONSTANTS: GC_MSGID_ZSVF TYPE SY-MSGID VALUE 'ZSVF'.
+
+* Print status
+CONSTANTS: GC_STATUS_A0      TYPE ZSVF_PRTSTAT VALUE 'A0', "Header and Item tables haven filled
+           GC_STATUS_B0      TYPE ZSVF_PRTSTAT VALUE 'B0', "CSV file has been created
+           GC_STATUS_B1      TYPE ZSVF_PRTSTAT VALUE 'B1', "CSV file creation failed
+           GC_STATUS_C0      TYPE ZSVF_PRTSTAT VALUE 'C0', "CSV file has been sent to SVF system
+           GC_STATUS_C1      TYPE ZSVF_PRTSTAT VALUE 'C1', "CSV file sent to SVF system failed
+           GC_STATUS_PRINTED TYPE ZSVF_PRTSTAT VALUE 'D0', "SVF return successful log
+           GC_STATUS_DELETED TYPE ZSVF_PRTSTAT VALUE 'E0'. "SVF return error log
+
+* Structure Type
+CONSTANTS: GC_STRUC_TYPE_HEADER TYPE C VALUE 'H',
+           GC_STRUC_TYPE_ITEM   TYPE C VALUE 'I'.
+
+* CSV Structure Name
+CONSTANTS: GC_CSV_STRUC_H_IPLT TYPE ROLLNAME VALUE 'ZSVF_CSV_HEADER_IPLT', "Inspection Lot
+           GC_CSV_STRUC_I_IPLT TYPE ROLLNAME VALUE 'ZSVF_CSV_ITEM_IPLT',
+           GC_CSV_STRUC_H_GRPO TYPE ROLLNAME VALUE 'ZSVF_CSV_HEADER_GRPO', "GR against PO
+           GC_CSV_STRUC_H_PRSO TYPE ROLLNAME VALUE 'ZSVF_CSV_HEADER_PRSO', "Process Order
+           GC_CSV_STRUC_I_PRSO TYPE ROLLNAME VALUE 'ZSVF_CSV_ITEM_PRSO',
+           GC_CSV_STRUC_H_PURO TYPE ROLLNAME VALUE 'ZSVF_CSV_HEADER_PURO', "Purchasing Order
+           GC_CSV_STRUC_I_PURO TYPE ROLLNAME VALUE 'ZSVF_CSV_ITEM_PURO',
+           GC_CSV_STRUC_H_LAPT TYPE ROLLNAME VALUE 'ZSVF_CSV_HEADER_LAPT'. "Label
+
+* Changed Field Indicator Structure
+CONSTANTS: GC_CHG_STRUC_H_PURO TYPE ROLLNAME VALUE 'ZSVF_CHANGE_HEADER_PURO', "Purchase Order Header
+           GC_CHG_STRUC_I_PURO TYPE ROLLNAME VALUE 'ZSVF_CHANGE_ITEM_PURO'.   "Purchase Order Item
+
+* Table ZSVF005 Print Type
+CONSTANTS: GC_PRTTYPE_PRINT TYPE ZSVF_PRTTYPE VALUE '1',
+           GC_PRTTYPE_PDF   TYPE ZSVF_PRTTYPE VALUE '2',
+           GC_PRTTYPE_EMAIL TYPE ZSVF_PRTTYPE VALUE '3'.
+
+* SVF Operation Type
+CONSTANTS: GC_OPKIND_PRINT(5)  TYPE C VALUE 'PRINT',
+           GC_OPKIND_DELETE(6) TYPE C VALUE 'DELETE'.

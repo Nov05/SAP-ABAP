@@ -1,0 +1,45 @@
+FUNCTION Z_SVF_GET_ADDR_DAIKIN_FORMAT.
+*"----------------------------------------------------------------------
+*"*"Local Interface:
+*"  IMPORTING
+*"     VALUE(I_LANGU) TYPE  SPRAS DEFAULT '1'
+*"     VALUE(I_CITY1) TYPE  AD_CITY1 OPTIONAL
+*"     VALUE(I_STREET) TYPE  AD_STREET OPTIONAL
+*"     VALUE(I_CITY2) TYPE  AD_CITY2 OPTIONAL
+*"     VALUE(I_STR_SUPPL1) TYPE  AD_STRSPP1 OPTIONAL
+*"  EXPORTING
+*"     VALUE(O_DELADS) TYPE  ZSVF_DLVADS
+*"----------------------------------------------------------------------
+  CONSTANTS: LC_SEPARATOR(2) TYPE C VALUE ', '.
+
+  CLEAR O_DELADS.
+
+  CASE I_LANGU.
+    WHEN '1'. "Chinese
+      CONCATENATE I_CITY1
+                  I_STREET
+                  I_CITY2
+                  I_STR_SUPPL1
+                  INTO O_DELADS.
+    WHEN OTHERS. "English, Japanese, etc.
+      IF I_STR_SUPPL1 IS NOT INITIAL.
+        O_DELADS = I_STR_SUPPL1.
+      ENDIF.
+      IF I_CITY2 IS NOT INITIAL.
+        CONCATENATE O_DELADS I_CITY2
+               INTO O_DELADS SEPARATED BY LC_SEPARATOR.
+      ENDIF.
+      IF I_STREET IS NOT INITIAL.
+        CONCATENATE O_DELADS I_STREET
+               INTO O_DELADS SEPARATED BY LC_SEPARATOR.
+      ENDIF.
+      IF I_CITY1 IS NOT INITIAL.
+        CONCATENATE O_DELADS I_CITY1
+               INTO O_DELADS SEPARATED BY LC_SEPARATOR.
+      ENDIF.
+      SHIFT O_DELADS LEFT DELETING LEADING ', '.
+  ENDCASE. "case i_langu
+
+  CONDENSE O_DELADS.
+
+ENDFUNCTION.

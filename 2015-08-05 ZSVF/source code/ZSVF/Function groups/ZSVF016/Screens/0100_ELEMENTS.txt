@@ -1,0 +1,18 @@
+TCTRL_ZSVF016	
+VIM_FRAME_FIELD	____________________________________________________________
+*ZSVF016-WERKS	Plnt
+*ZSVF016-ZSVF_DOC_TYPE	DocT
+*ZSVF016-ZSVF_LABLTYPE	Label Type
+*ZSVF016-ZSVF_LABLVER	Lbl Ver
+*ZSVF016-ZSVF_VADATE	Valid From
+*ZSVF016-ZSVF_LABLMAT	Label Material
+VIM_MARKED	_
+ZSVF016-WERKS	____
+ZSVF016-ZSVF_DOC_TYPE	____
+ZSVF016-ZSVF_LABLTYPE	__________
+ZSVF016-ZSVF_LABLVER	___
+ZSVF016-ZSVF_VADATE	__________
+ZSVF016-ZSVF_LABLMAT	__________________
+VIM_POSI_PUSH	____________________
+VIM_POSITION_INFO	______________________________
+OK_CODE	____

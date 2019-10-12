@@ -1,0 +1,564 @@
+*&---------------------------------------------------------------------*
+*&  Include           ZSVF0070_I03
+*&---------------------------------------------------------------------*
+*----------------------------------------------------------------------*
+* Get Vendor
+*----------------------------------------------------------------------*
+  CLEAR LW_LFA1.
+  SELECT SINGLE * INTO LW_LFA1 FROM LFA1
+    WHERE LIFNR = DOC-XEKKO-LIFNR.
+
+*----------------------------------------------------------------------*
+* Get Languages
+*----------------------------------------------------------------------*
+** Get vendor language
+** Vendor language = PO language
+*  LV_VENDOR_LANG = LW_LFA1-SPRAS.
+
+* Decide SVF output language
+  CLEAR LV_SVF_LANG.
+* SVF output language = message communication language
+*  LV_ZSVF_SPRAS = NAST-SPRAS.
+* SVF output langauge is decided by vendor's country
+  CALL FUNCTION 'Z_SVF_GET_LANGUAGE_BY_VENDOR'
+    EXPORTING
+      I_LIFNR = DOC-XEKKO-LIFNR
+    IMPORTING
+      O_SPRAS = LV_SVF_LANG.
+
+* Get PO language
+  CLEAR LV_PO_LANG.
+  LV_PO_LANG = DOC-XEKKO-SPRAS.
+
+*----------------------------------------------------------------------*
+* SVF Print Info
+*----------------------------------------------------------------------*
+* Print Request Key
+  LW_PRINT_KEY-ZSVF_DOC_TYPE = GC_DOC_TYPE_PURO.
+  LW_PRINT_KEY-ZSVF_DOC_NUM  = DOC-XEKKO-EBELN.
+*  lw_print_key-zsvf_doc_item = ''. "doc item is not needed here.
+
+*----------------------------------------------------------------------*
+* SVF Print Info
+*----------------------------------------------------------------------*
+* #####################
+  CALL FUNCTION 'Z_SVF_GET_PRINT_INFO'
+    EXPORTING
+      I_PRINT_KEY           = LW_PRINT_KEY
+      I_BUKRS               = DOC-XEKKO-BUKRS
+      I_PDDEPT              = ''
+      I_PDLINE              = ''
+      I_SLOC                = ''
+      I_PURGP               = DOC-XEKKO-EKGRP
+*     i_prcrid              = "not in use
+    TABLES
+      OT_ZSVF005            = LT_ZSVF005
+    EXCEPTIONS
+      NO_PRINT_CONFIG_FOUND = 1
+      NO_PRINTER_FOUND      = 2
+      OTHERS                = 3.
+  IF SY-SUBRC <> 0.
+    MACRO_PRINT_FAILED. "Exit Form
+  ENDIF.
+
+  CALL FUNCTION 'Z_SVF_COPYID_ENQUEUE'
+    EXPORTING
+      I_DOC_TYPE             = LW_PRINT_KEY-ZSVF_DOC_TYPE
+      I_DOC_NUM              = LW_PRINT_KEY-ZSVF_DOC_NUM
+    EXCEPTIONS
+      ENQUEUE_DOC_ID_FAILURE = 1
+      OTHERS                 = 2.
+  IF SY-SUBRC <> 0.
+    MACRO_PRINT_FAILED. "Exit Form
+  ENDIF.
+
+  CALL FUNCTION 'Z_SVF_COPYID_GET_NEXT'
+    EXPORTING
+      I_DOC_TYPE = LW_PRINT_KEY-ZSVF_DOC_TYPE
+      I_DOC_NUM  = LW_PRINT_KEY-ZSVF_DOC_NUM
+    IMPORTING
+      O_DOC_ID   = LW_PRINT_KEY-ZSVF_DOC_ID.
+
+*----------------------------------------------------------------------*
+* Get Fields Changed
+*----------------------------------------------------------------------*
+* #############################
+* ##### EKKO EKPO EKET ########### Change Document ###
+* ###### X
+  CALL FUNCTION 'Z_SVF_GET_PO_CHANGES_ALL'
+    EXPORTING
+      I_EKKO            = DOC-XEKKO
+    TABLES
+      IT_EKPO           = DOC-XEKPO[]
+      IT_EKET           = DOC-XEKET[]
+      OT_PO_CHANGES_KOM = LT_PO_CHANGES_KOM.
+
+  CALL FUNCTION 'Z_SVF_GET_PO_CHANGES_TXT'
+    EXPORTING
+      I_LANGU           = LV_SVF_LANG
+    TABLES
+      IT_PO_CHANGES_KOM = LT_PO_CHANGES_KOM
+      OT_PO_CHANGES_TXT = LT_PO_CHANGES_TXT.
+
+*----------------------------------------------------------------------*
+* Prepare Header Data for Printing
+*----------------------------------------------------------------------*
+  CLEAR: LW_ZSVF008, LT_ZSVF008[].
+
+  MOVE-CORRESPONDING DOC-XEKKO TO LW_ZSVF008.
+  LW_ZSVF008-ZSVF_DOC_ID = LW_PRINT_KEY-ZSVF_DOC_ID.
+
+* SVF form language
+  LW_ZSVF008-ZSVF_SPRAS = LV_SVF_LANG.
+* Payment term
+  LW_ZSVF008-ZTERM = DOC-XEKKO-ZTERM.
+* Vendor information
+* Changed by Arwen on 2015-02-17
+*  LW_ZSVF008-ZSVF_VNAME = LW_LFA1-NAME1.
+*  LW_ZSVF008-ZSVF_VNAME2 = LW_LFA1-NAME2.
+*  LW_ZSVF008-ZSVF_VNAME3 = LW_LFA1-NAME3.
+*  LW_ZSVF008-ZSVF_VPSTLZ = LW_LFA1-PSTLZ.
+*  LW_ZSVF008-ZSVF_VSTRAS = LW_LFA1-STRAS. "Char30
+*  LW_ZSVF008-ZSVF_VTELF1 = LW_LFA1-TELF1.
+*  LW_ZSVF008-ZSVF_VTELFX = LW_LFA1-TELFX.
+* 2015-04-23 Vendor address bug fix
+  CLEAR LV_ADRNR.
+  IF DOC-XEKKO-ADRNR IS NOT INITIAL.
+    LV_ADRNR = DOC-XEKKO-ADRNR.
+  ELSE.
+    LV_ADRNR = LW_LFA1-ADRNR.
+  ENDIF.
+  PERFORM FRM_GET_VENDOR_ADDRESS USING    LV_ADRNR
+                                          LV_SVF_LANG
+                                 CHANGING LW_ZSVF008-ZSVF_VNAME
+                                          LW_ZSVF008-ZSVF_VNAME2
+                                          LW_ZSVF008-ZSVF_VNAME3
+                                          LW_ZSVF008-ZSVF_VPSTLZ
+                                          LW_ZSVF008-ZSVF_VSTRAS
+                                          LW_ZSVF008-ZSVF_VTELF1
+                                          LW_ZSVF008-ZSVF_VTELFX.
+
+* Get company information
+  CALL FUNCTION 'Z_SVF_GET_BUKRS_INFO'
+    EXPORTING
+      I_DOC_TYPE   = LW_PRINT_KEY-ZSVF_DOC_TYPE
+*     i_werks      =
+      I_BUKRS      = DOC-XEKKO-BUKRS
+      I_SPRAS      = LW_ZSVF008-ZSVF_SPRAS
+    IMPORTING
+      O_BUKRS      = LV_BUKRS
+      O_BUTXT      = LV_BUTXT
+      O_ZSVF_CCPIC = LV_ZSVF_CCPIC
+      O_STREET     = LV_STREET.
+  LW_ZSVF008-BUKRS = LV_BUKRS.
+  LW_ZSVF008-ZSVF_CCNAME = LV_BUTXT. "Company Name
+  LW_ZSVF008-ZSVF_CCPIC = LV_ZSVF_CCPIC."Company Logo Picture
+  LW_ZSVF008-ZSVF_CCADS = LV_STREET. "Company Address
+
+* PO contact: Purchase group telephone number, fax
+* ################
+  SELECT SINGLE "EKTEL
+                TEL_NUMBER "2015-04-24 Cathy's Config Change
+                TELFX
+    FROM T024
+    INTO (LW_ZSVF008-TEL_NUMBER, LW_ZSVF008-TELFX)
+    WHERE EKGRP = DOC-XEKKO-EKGRP.
+* 2015-04-24 Added
+* Format Purchase Group telephone number
+* 2015-06-12 Change: Telephone number format is no longer
+*      decided by custom table for vendor country, but
+*      company country.
+  CALL FUNCTION 'Z_SVF_PO_TELNUMBER_FORMAT'
+    EXPORTING
+      I_SPRAS     = LV_SVF_LANG      "added on 2015-06-12
+      I_BUKRS     = LW_ZSVF008-BUKRS
+*     I_LIFNR     = LW_ZSVF008-LIFNR "deleted on 2015-06-12
+*     I_EKGRP     = DOC-XEKKO-EKGRP "deleted on 2015-06-12
+      I_TELNUMBER = LW_ZSVF008-TEL_NUMBER
+*     EXTENSION_IN                =
+*     WILDCARDS   =
+    IMPORTING
+      O_TELNUMBER = LW_ZSVF008-TEL_NUMBER
+*     NUMBER_CANONICAL            =
+*     COUNTRY_CODE                =
+*     AREA_CODE   =
+*     SUBSCRIBER  =
+*     EXTENSION_OUT               =
+*     WORST_ERROR =
+*     NUMBER_CANONICAL_LONG       =
+* TABLES
+*     MESSAGES    =
+    .
+
+* Format Purchase Group fax number
+  CALL FUNCTION 'Z_SVF_PO_TELNUMBER_FORMAT'
+    EXPORTING
+      I_SPRAS     = LV_SVF_LANG
+      I_BUKRS     = LW_ZSVF008-BUKRS
+*      I_LIFNR     = LW_ZSVF008-LIFNR "Deleted, 2015-06-12
+*      I_EKGRP     = DOC-XEKKO-EKGRP  "Deleted, 2015-06-12
+      I_TELNUMBER = LW_ZSVF008-TELFX
+*     EXTENSION_IN                =
+*     WILDCARDS   =
+    IMPORTING
+      O_TELNUMBER = LW_ZSVF008-TELFX
+*     NUMBER_CANONICAL            =
+*     COUNTRY_CODE                =
+*     AREA_CODE   =
+*     SUBSCRIBER  =
+*     EXTENSION_OUT               =
+*     WORST_ERROR =
+*     NUMBER_CANONICAL_LONG       =
+* TABLES
+*     MESSAGES    =
+    .
+* Changed Header Field Indicators
+  READ TABLE LT_PO_CHANGES_KOM INTO LW_PO_CHANGES_KOM
+                               WITH KEY EBELN = LW_ZSVF008-EBELN
+                                        EBELP = ''.
+  IF SY-SUBRC = 0.
+    LW_ZSVF008-ZSVF_CHAGEID_H = LW_PO_CHANGES_KOM-ZSVF_CHAGEID_H.
+  ENDIF.
+
+* Get PO creator User ID and full name
+* Added on 2015-03-15
+  CALL FUNCTION 'Z_SVF_GET_USER_NAME'
+    EXPORTING
+      I_USRID      = LW_ZSVF008-ERNAM
+    IMPORTING
+*     O_NAME_TEXT  =
+*     O_FULL_NAME_ZH       =
+      O_ID_NAME_ZH = LV_ID_NAME_ZH.
+  LW_ZSVF008-ZSVF_BUYER = LV_ID_NAME_ZH.
+
+* Entry log
+  LW_ZSVF008-LOG_REPID = SY-REPID.
+  LW_ZSVF008-LOG_UNAME = SY-UNAME.
+  LW_ZSVF008-LOG_DATUM = SY-DATUM.
+  LW_ZSVF008-LOG_UZEIT = SY-UZEIT.
+
+  APPEND LW_ZSVF008 TO LT_ZSVF008.
+  READ TABLE LT_ZSVF008 INDEX 1 ASSIGNING <LW_ZSVF008>.
+
+*----------------------------------------------------------------------*
+* Prepare Item Data for Printing
+*----------------------------------------------------------------------*
+* #########
+  CLEAR LT_POADDRDELIVERY[].
+  CALL FUNCTION 'BAPI_PO_GETDETAIL1'
+    EXPORTING
+      PURCHASEORDER    = LW_ZSVF008-EBELN
+*     ACCOUNT_ASSIGNMENT       = ' '
+*     ITEM_TEXT        = ' '
+*     HEADER_TEXT      = ' '
+      DELIVERY_ADDRESS = 'X'
+*     VERSION          = ' '
+*     SERVICES         = ' '
+*     SERIALNUMBERS    = ' '
+*     INVOICEPLAN      = ' '
+*     IMPORTING
+*     POHEADER         =
+*     POEXPIMPHEADER   =
+    TABLES
+*     RETURN           =
+*     POITEM           =
+      POADDRDELIVERY   = LT_POADDRDELIVERY
+*     POSCHEDULE       =
+*     POACCOUNT        =
+*     POCONDHEADER     =
+*     POCOND           =
+*     POLIMITS         =
+*     POCONTRACTLIMITS =
+*     POSERVICES       =
+*     POSRVACCESSVALUES        =
+*     POTEXTHEADER     =
+*     POTEXTITEM       =
+*     POEXPIMPITEM     =
+*     POCOMPONENTS     =
+*     POSHIPPINGEXP    =
+*     POHISTORY        =
+*     POHISTORY_TOTALS =
+*     POCONFIRMATION   =
+*     ALLVERSIONS      =
+*     POPARTNER        =
+*     EXTENSIONOUT     =
+*     SERIALNUMBER     =
+*     INVPLANHEADER    =
+*     INVPLANITEM      =
+*     POHISTORY_MA     =
+    .
+
+  LOOP AT DOC-XEKPO INTO LW_EKPO.
+    CLEAR LW_ZSVF009.
+    MOVE-CORRESPONDING LW_EKPO TO LW_ZSVF009.
+    LW_ZSVF009-ZSVF_DOC_ID = LW_PRINT_KEY-ZSVF_DOC_ID.
+
+* Delivery date ####
+    CLEAR LW_EKET.
+    READ TABLE DOC-XEKET INTO LW_EKET
+      WITH KEY EBELN = DOC-XEKKO-EBELN
+               EBELP = LW_EKPO-EBELP.
+    IF SY-SUBRC = 0.
+      LW_ZSVF009-EINDT = LW_EKET-EINDT.
+    ENDIF.
+
+* Get tax code description ##
+    CALL FUNCTION 'Z_SVF_GET_TAX_PERCENTAGE'
+      EXPORTING
+        I_BUKRS          = LV_BUKRS
+        I_MWSKZ          = LW_ZSVF009-MWSKZ
+      IMPORTING
+        O_TAX_RATE       = LV_TAX_RATE
+        O_TAX_PERCENTAGE = LV_TAX_PERCENTAGE.
+    LW_ZSVF009-ZSVF_MWSKZ = LV_TAX_PERCENTAGE.
+
+* Whether need to display tax column in SVF form
+* Changed on 2015-05-11, decided by tax rate=0, no hard coding.
+*    IF <LW_ZSVF008>-ZSVF_DISTAX <> 'X'
+*      AND LW_ZSVF009-MWSKZ NOT IN LR_MWSKZ.
+*      <LW_ZSVF008>-ZSVF_DISTAX = 'X'.
+*    ENDIF.
+    IF <LW_ZSVF008> IS ASSIGNED AND <LW_ZSVF008>-ZSVF_DISTAX <> 'X'
+      AND ( LW_ZSVF009-MWSKZ IS INITIAL "#######VAT#####
+            OR LV_TAX_RATE <> 0 ).
+      <LW_ZSVF008>-ZSVF_DISTAX = 'X'.
+    ENDIF.
+
+* ####
+* Changed on 2015-02-16
+*    LW_ITEM-ZSVF_GRSPR = LW_ITEM-ZSVF_NETPR * LW_ZSVF009-MENGE
+*                         * ( '1.0' + LV_TAX_RATE )
+*                         / LW_ZSVF009-PEINH.
+    CALL FUNCTION 'Z_SVF_GET_GROSS_VALUE'
+      EXPORTING
+        I_PRINT_KEY         = LW_PRINT_KEY
+        I_BUKRS             = LV_BUKRS
+        I_MWSKZ             = LW_ZSVF009-MWSKZ
+        I_MENGE             = LW_ZSVF009-MENGE
+        I_PEINH             = LW_ZSVF009-PEINH
+        I_NETPR             = LW_ZSVF009-NETPR
+        I_NETWR             = LW_ZSVF009-NETWR
+        I_BRTWR             = LW_ZSVF009-BRTWR
+      IMPORTING
+        O_ZSVF_GRSPR        = LW_ZSVF009-ZSVF_GRSPR
+      EXCEPTIONS
+        ARITHMETIC_OVERFLOW = 1
+        OTHERS              = 2.
+
+* #####
+* Changed on 2015-02-04. Added field ZSVF_PEROPU for PEINH and BPRME.
+* e.g. 1000 RMB/1 KG
+*    LW_ITEM-ZSVF_NETPR = LW_ZSVF009-NETPR / LW_ZSVF009-PEINH.
+    LW_ZSVF009-ZSVF_NETPR = LW_ZSVF009-NETPR.
+    DATA: LV_MENGE  TYPE CD0QUAN,
+          LV_CHAR30 TYPE CHAR30.
+    LV_MENGE = LW_ZSVF009-PEINH.
+    WRITE LV_MENGE TO LV_CHAR30.
+    CONDENSE LV_CHAR30.
+    CONCATENATE '/' LV_CHAR30 LW_ZSVF009-BPRME
+                INTO LW_ZSVF009-ZSVF_PEROPU SEPARATED BY SPACE.
+
+* Convert currency display
+* #####
+    PERFORM FRM_CURRENCY_AMOUNT_TO_DISPLAY
+            USING LW_ZSVF008-WAERS
+            CHANGING LW_ZSVF009-ZSVF_NETPR.
+* #####
+    PERFORM FRM_CURRENCY_AMOUNT_TO_DISPLAY
+            USING LW_ZSVF008-WAERS
+            CHANGING LW_ZSVF009-NETWR.
+* ####
+    PERFORM FRM_CURRENCY_AMOUNT_TO_DISPLAY
+            USING LW_ZSVF008-WAERS
+            CHANGING LW_ZSVF009-ZSVF_GRSPR.
+
+* ######: LOEKZ=‘L'###########
+    IF LW_ZSVF009-LOEKZ = 'L'.
+      LW_ZSVF009-LOEKZ = 'X'.
+      CALL FUNCTION 'Z_SVF_GET_TEXT_POOL_SINGLE'
+        EXPORTING
+          I_CPROG = 'ZSVF0070'
+          I_LANGU = LW_ZSVF008-ZSVF_SPRAS
+*         I_ID    = 'I'
+          I_KEY   = '001'
+        IMPORTING
+          O_ENTRY = LW_ZSVF009-ZSVF_DELTXT
+*         O_LENGTH       =
+        .
+    ENDIF.
+
+* ####
+    READ TABLE LT_POADDRDELIVERY INTO LW_POADDRDELIVERY
+                                 WITH KEY PO_ITEM = LW_ZSVF009-EBELP.
+    IF SY-SUBRC = 0.
+      LW_ZSVF009-ADDR_NO = LW_POADDRDELIVERY-ADDR_NO.
+* Begin of deletion, 2015-05-11
+** Changed by Arwen, 2015-04-15
+**      LW_ZSVF009-ZSVF_DLVADS = LW_POADDRDELIVERY-STREET.
+*      CASE LV_SVF_LANG.
+*        WHEN '1' OR 'J'.
+*          CONCATENATE LW_POADDRDELIVERY-CITY "AD_CITY1, Char 40
+*                      LW_POADDRDELIVERY-STREET "AD_STREET, Char 60
+*                      LW_POADDRDELIVERY-DISTRICT "AD_CITY2, Char 40
+*                      LW_POADDRDELIVERY-STR_SUPPL1 "AD_STRSPP1, Char 40
+*                      INTO LW_ZSVF009-ZSVF_DLVADS.  "Char 180
+*        WHEN OTHERS. "CASE LV_SVF_LANG.
+*          CONCATENATE LW_POADDRDELIVERY-STR_SUPPL1
+*                      LW_POADDRDELIVERY-DISTRICT
+*                      LW_POADDRDELIVERY-STREET
+*                      LW_POADDRDELIVERY-CITY
+*                      INTO LW_ZSVF009-ZSVF_DLVADS
+*                      SEPARATED BY SPACE.          "Char 180+3
+*      ENDCASE. "CASE LV_SVF_LANG.
+*      CONDENSE LW_ZSVF009-ZSVF_DLVADS.
+* End of deletion, 2015-05-11
+      CALL FUNCTION 'Z_SVF_GET_ADDR_DAIKIN_FORMAT' "Encapsulated, 2015-05-11
+        EXPORTING
+          I_LANGU      = LV_SVF_LANG
+          I_CITY1      = LW_POADDRDELIVERY-CITY "AD_CITY1, Char 40
+          I_STREET     = LW_POADDRDELIVERY-STREET "AD_STREET, Char 60
+          I_CITY2      = LW_POADDRDELIVERY-DISTRICT "AD_CITY2, Char 40
+          I_STR_SUPPL1 = LW_POADDRDELIVERY-STR_SUPPL1 "AD_STRSPP1, Char 40
+        IMPORTING
+          O_DELADS     = LW_ZSVF009-ZSVF_DLVADS. "Char 183
+    ENDIF.
+
+* Changed Item Field Indicators ##########
+    READ TABLE LT_PO_CHANGES_KOM INTO LW_PO_CHANGES_KOM
+                                 WITH KEY EBELN = LW_ZSVF009-EBELN
+                                          EBELP = LW_ZSVF009-EBELP.
+    IF SY-SUBRC = 0.
+      LW_ZSVF009-ZSVF_CHAGEID_I = LW_PO_CHANGES_KOM-ZSVF_CHAGEID_I.
+    ENDIF.
+    "Change descriptions
+    READ TABLE LT_PO_CHANGES_TXT INTO LW_PO_CHANGES_TXT
+                                 WITH KEY EBELN = LW_ZSVF009-EBELN
+                                          EBELP = LW_ZSVF009-EBELP.
+    IF SY-SUBRC = 0.
+      LW_ZSVF009-ZSVF_CHGTXT = LW_PO_CHANGES_TXT-ZSVF_CHGTXT.
+    ENDIF.
+
+* Entry log
+    LW_ZSVF009-LOG_REPID = SY-REPID.
+    LW_ZSVF009-LOG_UNAME = SY-UNAME.
+    LW_ZSVF009-LOG_DATUM = SY-DATUM.
+    LW_ZSVF009-LOG_UZEIT = SY-UZEIT.
+
+    APPEND LW_ZSVF009 TO LT_ZSVF009.
+  ENDLOOP. "LOOP AT DOC-XEKPO
+
+* Sort items
+  PERFORM FRM_SORT_ITEMS TABLES LT_ZSVF009.
+
+* Get Document Type Description
+  CLEAR LV_DOC_TYPE_DESC.
+  CALL FUNCTION 'Z_SVF_GET_DOC_TYPE_DESC'
+    EXPORTING
+      I_DOC_TYPE      = LW_PRINT_KEY-ZSVF_DOC_TYPE
+      I_LANGU         = '1' "Chinese
+    IMPORTING
+      O_DOC_TYPE_DESC = LV_DOC_TYPE_DESC.
+
+  LOOP AT LT_ZSVF005 INTO LW_ZSVF005.
+    CLEAR LW_ZSVF005_KOM.
+    MOVE-CORRESPONDING LW_ZSVF005 TO LW_ZSVF005_KOM.
+*----------------------------------------------------------------------*
+* Get SVF Spool name
+*----------------------------------------------------------------------*
+** 2015-03-26
+** ###_[10#PO#]_V#(####)_1####(#####)
+** #####_3000077755_V1_1
+*    MACRO_CONCATENATE_STR:
+*      LV_DOC_TYPE_DESC         LW_ZSVF005_KOM-ZSVF_SPLNAM, "####
+*      '_'                      LW_ZSVF005_KOM-ZSVF_SPLNAM,
+*      LW_ZSVF008-EBELN         LW_ZSVF005_KOM-ZSVF_SPLNAM, "#####
+*      '_V'                     LW_ZSVF005_KOM-ZSVF_SPLNAM,
+*      LW_PRINT_KEY-ZSVF_DOC_ID LW_ZSVF005_KOM-ZSVF_SPLNAM, "#### Version
+*      '_'                      LW_ZSVF005_KOM-ZSVF_SPLNAM,
+*      LW_ZSVF005-ZSVF_PRT_CONT LW_ZSVF005_KOM-ZSVF_SPLNAM. "##
+
+* 2015-04-09 [####] 3000077755 v1
+    MACRO_CLEAR_STRINGS.
+*    CONCATENATE '[' LV_DOC_TYPE_DESC ']' INTO GV_STR_01. "Doc Type
+    GV_STR_02 = LW_ZSVF008-EBELN. "#####
+    SHIFT GV_STR_02 LEFT DELETING LEADING '0'.
+    GV_STR_03 = LW_PRINT_KEY-ZSVF_DOC_ID. "#### Version
+    SHIFT GV_STR_03 LEFT DELETING LEADING '0'.
+    CONCATENATE 'v' GV_STR_03 INTO GV_STR_03.
+    MACRO_CONCATENATE_STRINGS LW_ZSVF005_KOM-ZSVF_SPLNAM SPACE.
+*----------------------------------------------------------------------*
+* Get SVF Mail Subject
+*----------------------------------------------------------------------*
+* 2015-04-09
+* [####] PO:3000077755_v1
+    MACRO_CLEAR_STRINGS.
+    CONCATENATE '[' LV_DOC_TYPE_DESC ']' INTO GV_STR_01. "Doc Type
+    GV_STR_02 = LW_ZSVF008-EBELN. "#####
+    SHIFT GV_STR_02 LEFT DELETING LEADING '0'.
+    GV_STR_03 = LW_PRINT_KEY-ZSVF_DOC_ID. "#### Version
+    SHIFT GV_STR_03 LEFT DELETING LEADING '0'.
+    CONCATENATE 'v' GV_STR_03 INTO GV_STR_03.
+    CONCATENATE 'PO:' GV_STR_02 '_' GV_STR_03 INTO GV_STR_02.
+    CLEAR GV_STR_03.
+    MACRO_CONCATENATE_STRINGS LW_ZSVF005_KOM-ZSVF_MAILSJT SPACE.
+
+    LW_ZSVF005_KOM-BUKRS = LV_BUKRS.
+    APPEND LW_ZSVF005_KOM TO LT_ZSVF005_KOM.
+  ENDLOOP. "LOOP AT LT_zsvf005
+
+*----------------------------------------------------------------------*
+* Create entries in status table
+*----------------------------------------------------------------------*
+  CALL FUNCTION 'Z_SVF_STATUS_CREATE'
+    EXPORTING
+      ZSVF_DOC_TYPE          = LW_PRINT_KEY-ZSVF_DOC_TYPE
+      ZSVF_DOC_NUM           = LW_PRINT_KEY-ZSVF_DOC_NUM
+      ZSVF_DOC_ID            = LW_PRINT_KEY-ZSVF_DOC_ID "copy id
+    TABLES
+      IT_ZSVF005_KOM         = LT_ZSVF005_KOM
+      OT_PRINT_KEY           = LT_PRINT_KEY
+    EXCEPTIONS
+      INPUT_FIELD_IS_INITIAL = 1
+      OTHERS                 = 2.
+  IF SY-SUBRC <> 0.
+    MACRO_PRINT_FAILED. "Exit Form
+  ENDIF.
+
+*----------------------------------------------------------------------*
+* Update history tables
+*----------------------------------------------------------------------*
+* Update header and item tables
+  INSERT ZSVF008 FROM TABLE LT_ZSVF008.
+  INSERT ZSVF009 FROM TABLE LT_ZSVF009.
+
+  CALL FUNCTION 'Z_SVF_COPYID_DEQUEUE'
+    EXPORTING
+      I_DOC_TYPE            = LW_PRINT_KEY-ZSVF_DOC_TYPE
+      I_DOC_NUM             = LW_PRINT_KEY-ZSVF_DOC_NUM
+    EXCEPTIONS
+      EQUEUE_DOC_ID_FAILURE = 1
+      OTHERS                = 2.
+
+* Update status
+  LOOP AT LT_PRINT_KEY INTO LW_PRINT_KEY.
+* Lock print keys
+    PERFORM FRM_LOCK_ZSVF001_DATA  USING LW_PRINT_KEY
+                                   CHANGING LV_LOCKED.
+    IF LV_LOCKED <> 'X'.
+      MACRO_PRINT_FAILED.
+    ENDIF.
+
+* The print subroutine is called by ME21N/ME22N,
+* Hence no need to lock Table ZSVF001 by print request key
+    CALL FUNCTION 'Z_SVF_STATUS_CHANGE'
+      EXPORTING
+        PRINT_KEY            = LW_PRINT_KEY
+        ZSVF_PRTSTAT         = GC_STATUS_A0
+        ZSVF_CHAGER          = SY-UNAME
+        ZSVF_CHDDATE         = SY-DATUM
+      EXCEPTIONS
+        PRINT_KEY_INVALID    = 1
+        PRINT_STATUS_INVALID = 2
+        MODIFY_TABLE_ERROR   = 3
+        OTHERS               = 4.
+  ENDLOOP.

@@ -1,0 +1,78 @@
+TCTRL_ZSVF008	
+VIM_FRAME_FIELD	____________________________________________________________
+*ZSVF008-EBELN	Purchasing Doc.
+*ZSVF008-ZSVF_DOC_ID	Copy ID
+*ZSVF008-BUKRS	CoCd
+*ZSVF008-BSART	OTyp
+*ZSVF008-SPRAS	Language
+*ZSVF008-ZTERM	PayT
+*ZSVF008-WAERS	Crcy
+*ZSVF008-INCO1	IncoT
+*ZSVF008-INCO2	Incoterms (Part 2)
+*ZSVF008-LIFNR	Vendor
+*ZSVF008-TEL_NUMBER	Telephone
+*ZSVF008-TELFX	Fax number
+*ZSVF008-BEDAT	Purchase Order Date
+*ZSVF008-ERNAM	Created by
+*ZSVF008-ZSVF_SPRAS	Form Langu
+*ZSVF008-ZSVF_VNAME	Name
+*ZSVF008-ZSVF_VNAME2	Name 2
+*ZSVF008-ZSVF_VNAME3	Name 3
+*ZSVF008-ZSVF_VPSTLZ	Postal Code
+*ZSVF008-ZSVF_VSTRAS	Vendor Address
+*ZSVF008-ZSVF_VTELF1	Telephone
+*ZSVF008-ZSVF_VTELFX	Fax Number
+*ZSVF008-ZSVF_BUYER	Buyer
+*ZSVF008-ZSVF_CCNAME	Company Name
+*ZSVF008-ZSVF_CCPIC	Company Picture Name
+*ZSVF008-ZSVF_CCADS	Company Address
+*ZSVF008-ZSVF_CHAGEID_H	Change Indicator
+*ZSVF008-ZSVF_DISTAX	Disp. Tax
+*ZSVF008-LOG_REPID	Program Name
+*ZSVF008-LOG_UNAME	User Name
+*ZSVF008-LOG_DATUM	Date
+*ZSVF008-LOG_UZEIT	Time
+*ZSVF008-LOG_REPID_CHG	Program Name
+*ZSVF008-LOG_UNAME_CHG	User Name
+*ZSVF008-LOG_DATUM_CHG	Date
+*ZSVF008-LOG_UZEIT_CHG	Time
+VIM_MARKED	_
+ZSVF008-EBELN	__________
+ZSVF008-ZSVF_DOC_ID	____
+ZSVF008-BUKRS	____
+ZSVF008-BSART	____
+ZSVF008-SPRAS	__
+ZSVF008-ZTERM	____
+ZSVF008-WAERS	_____
+ZSVF008-INCO1	___
+ZSVF008-INCO2	____________________________
+ZSVF008-LIFNR	__________
+ZSVF008-TEL_NUMBER	______________________________
+ZSVF008-TELFX	_______________________________
+ZSVF008-BEDAT	__________
+ZSVF008-ERNAM	____________
+ZSVF008-ZSVF_SPRAS	__
+ZSVF008-ZSVF_VNAME	________________________________________
+ZSVF008-ZSVF_VNAME2	________________________________________
+ZSVF008-ZSVF_VNAME3	________________________________________
+ZSVF008-ZSVF_VPSTLZ	__________
+ZSVF008-ZSVF_VSTRAS	____________________________________________________________
+ZSVF008-ZSVF_VTELF1	______________________________
+ZSVF008-ZSVF_VTELFX	_______________________________
+ZSVF008-ZSVF_BUYER	_____________________________________________________________________________________________
+ZSVF008-ZSVF_CCNAME	____________________________________________________________________________________________________
+ZSVF008-ZSVF_CCPIC	____________________________________________________________________________________________________________________________________
+ZSVF008-ZSVF_CCADS	____________________________________________________________________________________________________
+ZSVF008-ZSVF_CHAGEID_H	__________________________________________________
+ZSVF008-ZSVF_DISTAX	_
+ZSVF008-LOG_REPID	________________________________________
+ZSVF008-LOG_UNAME	____________
+ZSVF008-LOG_DATUM	__________
+ZSVF008-LOG_UZEIT	________
+ZSVF008-LOG_REPID_CHG	________________________________________
+ZSVF008-LOG_UNAME_CHG	____________
+ZSVF008-LOG_DATUM_CHG	__________
+ZSVF008-LOG_UZEIT_CHG	________
+VIM_POSI_PUSH	____________________
+VIM_POSITION_INFO	______________________________
+OK_CODE	____

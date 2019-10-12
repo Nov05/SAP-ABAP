@@ -1,0 +1,297 @@
+*----------------------------------------------------------------------*
+***INCLUDE LMEDRUCKF1T .
+*----------------------------------------------------------------------*
+*&---------------------------------------------------------------------*
+*&      Form  htnmat_read
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+*  -->  p1        text
+*  <--  p2        text
+*----------------------------------------------------------------------*
+FORM htnmat_read .
+
+  DATA:  l_vorga LIKE t160-vorga,
+         l_mtcom LIKE mtcom,
+         l_mt06e LIKE mt06e,
+         l_mtcor LIKE mtcor.
+
+*--- HTN-Abwicklung
+  REFRESH: htnmat, htnamp.
+  CLEAR: htnmat, htnamp.                                    "N692452
+  IF NOT ( ekpo-matnr EQ space AND                          " 437458
+            ekpo-ematn eq space ).
+    IF ekpo-mfrpn IS INITIAL AND NOT ekpo-mprof IS INITIAL.
+      CALL FUNCTION 'MB_SEARCH_HTN_MATERIAL'
+        EXPORTING
+          i_ematn          = ekpo-ematn
+          i_bmatn          = ekpo-matnr
+          i_mprof          = ekpo-mprof
+          i_werks          = ekpo-werks
+          i_datuv          = sy-datum
+        TABLES
+          e_htnmat         = htnmat
+          e_htnamp         = htnamp
+        EXCEPTIONS
+          no_records_found = 1
+          OTHERS           = 2.
+    ELSEIF NOT ekpo-mfrpn IS INITIAL.
+
+      CALL FUNCTION 'MB_READ_TMPPF'
+        EXPORTING
+          profile        = ekpo-mprof
+        IMPORTING
+          mpn_parameters = tmppf
+        EXCEPTIONS
+          no_entry       = 1
+          OTHERS         = 2.
+
+      IF NOT tmppf-mpamp IS INITIAL.
+        CALL FUNCTION 'MB_SEARCH_HTN_MATERIAL'
+          EXPORTING
+            i_ematn          = ekpo-ematn
+            i_bmatn          = ekpo-matnr
+            i_mprof          = ekpo-mprof
+            i_werks          = ekpo-werks
+            i_datuv          = sy-datum
+            i_revlv          = ekpo-revlv
+          TABLES
+            e_htnmat         = htnmat
+            e_htnamp         = htnamp
+          EXCEPTIONS
+            no_records_found = 1
+            OTHERS           = 2.
+      ENDIF.
+      REFRESH: htnmat. CLEAR: htnmat.
+      IF NOT htnamp[] IS INITIAL.
+        LOOP AT htnamp.
+          htnmat-mfrpn = ekpo-mfrpn.
+          IF NOT ekpo-emnfr IS INITIAL.
+            htnmat-emnfr = ekpo-emnfr.
+          ELSE.
+            htnmat-emnfr = ekpo-mfrnr.
+          ENDIF.
+          htnmat-mfrnr = htnamp-mfrnr.   "Herstellerwerk
+          htnmat-revlv = htnamp-revlv.   "Revisionslevel
+          htnmat-matnr = ekpo-ematn.
+          APPEND htnmat.
+        ENDLOOP.
+        CLEAR htnamp. REFRESH htnamp.
+      ELSE.
+        htnmat-mfrpn = ekpo-mfrpn.
+        IF NOT ekpo-emnfr IS INITIAL.
+          htnmat-emnfr = ekpo-emnfr.
+        ELSE.
+          htnmat-emnfr = ekpo-mfrnr.
+        ENDIF.
+        htnmat-revlv = ekpo-revlv.       "Revisionslevel
+        htnmat-matnr = ekpo-ematn.
+        APPEND htnmat.
+      ENDIF.
+    ENDIF.
+  ENDIF.                                                    "437458
+*
+  IF NOT htnmat[] IS INITIAL.
+    LOOP AT htnmat.
+      CLEAR: l_mtcom, l_mt06e, l_mtcor, l_vorga.
+
+      l_mtcom-kenng = 'MT06E'.
+      l_mtcom-matnr = htnmat-matnr.
+      l_mtcom-pstat = 'E'.
+      l_mtcom-spras = ekko-spras.
+* Note 799573: do not lock material master
+      l_mtcom-kzspr = ' '.
+
+      CALL FUNCTION 'MEX_CHECK_MATERIAL'
+        EXPORTING
+          im_mtcom      = l_mtcom
+          im_vorga      = space
+        IMPORTING
+          ex_mt06e      = l_mt06e
+          ex_mtcor      = l_mtcor
+        EXCEPTIONS
+          error_message = 1
+          OTHERS        = 2.
+      IF sy-subrc NE 0.
+        DELETE htnmat.
+        CONTINUE.
+      ENDIF.
+      CALL FUNCTION 'MEX_CHECK_MT06E_STATUS'
+        EXPORTING
+          im_mtcom      = l_mtcom
+          im_mtcor      = l_mtcor
+          im_mt06e      = l_mt06e
+        EXCEPTIONS
+          error_message = 1
+          OTHERS        = 2.
+      IF sy-subrc NE 0.
+        DELETE htnmat.
+        CONTINUE.
+      ENDIF.
+    ENDLOOP.
+  ENDIF.
+  IF NOT htnamp[] IS INITIAL.
+    LOOP AT htnamp.
+      CLEAR: l_mtcom, l_mt06e, l_mtcor, l_vorga.
+
+      l_mtcom-kenng = 'MT06E'.
+      l_mtcom-matnr = htnamp-matnr.
+      l_mtcom-pstat = 'E'.
+      l_mtcom-spras = ekko-spras.
+* Note 799573: do not lock material master
+      l_mtcom-kzspr = ' '.
+
+      CALL FUNCTION 'MEX_CHECK_MATERIAL'
+        EXPORTING
+          im_mtcom      = l_mtcom
+          im_vorga      = space
+        IMPORTING
+          ex_mt06e      = l_mt06e
+          ex_mtcor      = l_mtcor
+        EXCEPTIONS
+          error_message = 1
+          OTHERS        = 2.
+      IF sy-subrc NE 0.
+        DELETE htnamp.
+        CONTINUE.
+      ENDIF.
+      CALL FUNCTION 'MEX_CHECK_MT06E_STATUS'
+        EXPORTING
+          im_mtcom      = l_mtcom
+          im_mtcor      = l_mtcor
+          im_mt06e      = l_mt06e
+        EXCEPTIONS
+          error_message = 1
+          OTHERS        = 2.
+      IF sy-subrc NE 0.
+        DELETE htnamp.
+        CONTINUE.
+      ENDIF.
+    ENDLOOP.
+  ENDIF.
+
+ENDFORM.                    " htnmat_read
+*&---------------------------------------------------------------------*
+*&      Form  htnmat_print
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+*  -->  p1        text
+*  <--  p2        text
+*----------------------------------------------------------------------*
+FORM htnmat_print .
+* MPN-Abwicklung
+  IF NOT htnmat[] IS INITIAL OR NOT htnamp[] IS INITIAL.
+    CALL FUNCTION 'WRITE_FORM'
+      EXPORTING
+        element = 'ITEM_MPN_LISTHEADER'
+      EXCEPTIONS
+        OTHERS  = 01.
+    CLEAR sy-subrc.
+
+*... externe Herstellernummer besorgen ...............................*
+    DATA t_herst LIKE lfa1_key OCCURS 0 WITH HEADER LINE.
+    DATA t_lfa1  LIKE lfa1 OCCURS 0 WITH HEADER LINE.
+    DATA: BEGIN OF t_htnm OCCURS 0.
+            INCLUDE STRUCTURE v_htnm.
+    DATA:    revlv LIKE rampl-revlv,
+          END OF t_htnm.
+    REFRESH: t_herst, t_htnm.
+    IF NOT htnamp[] IS INITIAL.
+      LOOP AT htnamp.
+        MOVE-CORRESPONDING htnamp TO t_htnm.
+*... Nun steht in t_htnm-mfrnr das Herstellerwerk aus der LZHT .......*
+*
+*... Hersteller besorgen .............................................*
+        CALL FUNCTION 'MARA_SINGLE_READ'
+          EXPORTING
+            matnr  = htnamp-matnr
+          IMPORTING
+            wmara  = *mara
+          EXCEPTIONS
+            OTHERS = 5.
+        t_herst-lifnr = *mara-mfrnr.
+        APPEND t_herst.
+*
+*... zunächst externen Hersteller auf internen Hersteller setzen .....*
+        t_htnm-emnfr = *mara-mfrnr.
+        t_htnm-revlv = htnamp-revlv.
+        t_htnm-mfrpn = *mara-mfrpn.
+        APPEND t_htnm.
+      ENDLOOP.
+    ELSEIF NOT htnmat[] IS INITIAL AND
+       ekpo-mfrpn IS INITIAL.          "Kein HTN in der Bestellung
+      LOOP AT htnmat.                  "xxxxxx
+        t_herst-lifnr = htnmat-mfrnr.  "xxxxxx
+        if not t_herst-lifnr is initial.  "n_843838
+          APPEND t_herst.                "xxxxxx
+        endif.                            "n_843838
+      ENDLOOP.                         "xxxxxx
+    ENDIF.
+    IF NOT t_herst[] IS INITIAL.
+      CALL FUNCTION 'WY_LFA1_ARRAY_READ'
+*       EXPORTING
+*            REFRESH_BUFFER           =
+           TABLES
+                pti_lfa1_keytab          = t_herst
+                pto_lfa1                 = t_lfa1
+           EXCEPTIONS
+                err_no_records_requested = 1
+                err_no_records_found     = 2
+                OTHERS                   = 3.
+    ENDIF.
+    IF NOT htnamp[] IS INITIAL.
+*... LZHT-Verwaltung ist aktiv .......................................*
+      LOOP AT t_htnm.
+        MOVE-CORRESPONDING t_htnm TO v_htnm.
+*... Nun steht in v_htnm-mfrnr das Herstellerwerk aus der LZHT .......*
+*... Revisionslevel setzen ...........................................*
+        rampl-revlv = t_htnm-revlv.
+*
+*... externe Herstellernummer setzen .................................*
+        READ TABLE t_lfa1 WITH KEY lifnr = t_htnm-emnfr.
+        IF sy-subrc EQ 0 AND
+           NOT t_lfa1-emnfr IS INITIAL.
+          v_htnm-emnfr = t_lfa1-emnfr.
+        ELSE.
+          v_htnm-emnfr = t_htnm-emnfr.
+        ENDIF.
+
+        CALL FUNCTION 'WRITE_FORM'
+          EXPORTING
+            element = 'ITEM_MPN_LISTLINE'
+          EXCEPTIONS
+            OTHERS  = 01.
+      ENDLOOP.
+    ELSE.
+*... LZHT-Verwaltung ist NICHT aktiv .................................*
+      LOOP AT htnmat.
+        MOVE-CORRESPONDING htnmat TO v_htnm.
+        IF v_htnm-emnfr IS INITIAL AND
+           ekpo-mfrpn IS INITIAL.      "Nur falls keine HTn in Best.
+*... externe Herstellernummer setzen .................................*
+          READ TABLE t_lfa1 WITH KEY lifnr = htnmat-mfrnr.     "xxxxxx
+          IF sy-subrc EQ 0 AND
+            NOT t_lfa1-emnfr IS INITIAL.
+            v_htnm-emnfr = t_lfa1-emnfr.
+          ELSE.
+            v_htnm-emnfr = htnmat-mfrnr.                     "xxxxxx
+          ENDIF.
+        ENDIF.
+        IF NOT ekpo-revlv IS INITIAL.
+*... Revisionslevel aus der Bestellung setzen ........................*
+          rampl-revlv = ekpo-revlv.
+        ELSE.
+          rampl-revlv = t_htnm-revlv.
+        ENDIF.
+
+        CALL FUNCTION 'WRITE_FORM'
+          EXPORTING
+            element = 'ITEM_MPN_LISTLINE'
+          EXCEPTIONS
+            OTHERS  = 01.
+      ENDLOOP.
+    ENDIF.
+  ENDIF.
+
+ENDFORM.                    " htnmat_print

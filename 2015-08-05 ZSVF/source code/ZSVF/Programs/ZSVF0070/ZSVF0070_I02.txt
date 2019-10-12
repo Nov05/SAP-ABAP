@@ -1,0 +1,63 @@
+*&---------------------------------------------------------------------*
+*&  Include           ZSVF0070_I02
+*&---------------------------------------------------------------------*
+* Get data from memory
+CLEAR ENT_RETCO.
+IF NAST-AENDE EQ SPACE.
+  DRUVO = '1'.
+ELSE.
+  DRUVO = '2'.
+ENDIF.
+
+CALL FUNCTION 'ZME_READ_PO_FOR_PRINTING'
+  EXPORTING
+    IX_NAST                  = NAST
+    IX_SCREEN                = ENT_SCREEN
+    I_DELETED_ITEM           = 'X' "including items marked as deleted
+    I_SPECIFY_ITEM           = ' '
+  IMPORTING
+    EX_RETCO                 = ENT_RETCO
+    EX_NAST                  = NAST
+    DOC                      = DOC
+  CHANGING
+    CX_DRUVO                 = DRUVO
+    CX_FROM_MEMORY           = FROM_MEMORY
+  EXCEPTIONS
+    ITEM_SPECIFICATION_ERROR = 1
+    OTHERS                   = 2.
+
+LV_SUBRC = SY-SUBRC.
+
+IF GV_PO_PREVIEW_MODE = GC_PO_PREVIEW_MODE_OFF.
+* ############
+  IF ENT_SCREEN IS NOT INITIAL.
+    MESSAGE S024 DISPLAY LIKE 'E'. "#############
+    RETURN. "Exit Form
+  ENDIF.
+ENDIF. "IF GV_PO_PREVIEW_MODE = GC_PO_PREVIEW_MODE_OFF.
+
+*IF LV_SUBRC = 1.
+** Message ZSVF406 ####### & ############
+*  PERFORM FRM_NAST_PROTOCAL_UPDATE USING 'ZSVF' "MSG_ARBGB
+*                                         '406'  "MSG_NR
+*                                         'E'    "MSG_TY
+*                                         ' '    "MSG_V1
+*                                         ' '    "MSG_V2
+*                                         ' '    "MSG_V3
+*                                         ' '.   "MSG_V4
+*  RETURN. "exit form
+*ENDIF.
+
+* Check data
+IF DOC-XEKKO-EBELN IS INITIAL
+  OR DOC-XEKPO[] IS INITIAL.
+* Message ZSVF999 #########
+  PERFORM FRM_NAST_PROTOCAL_UPDATE USING 'ZSVF' "MSG_ARBGB
+                                         '999'  "MSG_NR
+                                         'E'    "MSG_TY
+                                         ' '    "MSG_V1
+                                         ' '    "MSG_V2
+                                         ' '    "MSG_V3
+                                         ' '.   "MSG_V4
+  RETURN. "exit form
+ENDIF.

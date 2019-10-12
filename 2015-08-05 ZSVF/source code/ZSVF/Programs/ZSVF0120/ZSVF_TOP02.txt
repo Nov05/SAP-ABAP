@@ -1,0 +1,799 @@
+*&---------------------------------------------------------------------*
+*&  Include           ZSVF_TOP02
+*&---------------------------------------------------------------------*
+* This include stores all the macros or forms used globally.
+
+*&---------------------------------------------------------------------*
+*&  Global Variants
+*&---------------------------------------------------------------------*
+DATA: GV_STR_01 TYPE STRING,
+      GV_STR_02 TYPE STRING,
+      GV_STR_03 TYPE STRING,
+      GV_STR_04 TYPE STRING,
+      GV_STR_05 TYPE STRING,
+      GV_STR_06 TYPE STRING,
+      GV_STR_07 TYPE STRING,
+      GV_STR_08 TYPE STRING,
+      GV_STR_09 TYPE STRING,
+      GV_STR_10 TYPE STRING.
+
+DATA: GV_MACRO_MESSAGE_V1 TYPE SYMSGV,
+      GV_MACRO_MESSAGE_V2 TYPE SYMSGV,
+      GV_MACRO_MESSAGE_V3 TYPE SYMSGV,
+      GV_MACRO_MESSAGE_V4 TYPE SYMSGV,
+      GV_MACRO_MESSAGE    TYPE BAPI_MSG,
+      GV_MACRO_STR        TYPE STRING.
+*&---------------------------------------------------------------------*
+*&   MACRO_SVF_LOG_WRITE
+*&---------------------------------------------------------------------*
+DEFINE MACRO_SVF_LOG_WRITE.
+* CAUTION: The default message class is 'ZSVF'.
+
+* &1 = Print Request Key
+* &2 = Message Type
+* &3 = Message Number
+* &4 = Message Variant 1
+* &5 = Message Variant 2
+* &6 = Message Variant 3
+* &7 = Message Variant 4
+
+  CLEAR GV_MACRO_MESSAGE.
+  GV_MACRO_MESSAGE_V1 = &4.
+  GV_MACRO_MESSAGE_V2 = &5.
+  GV_MACRO_MESSAGE_V3 = &6.
+  GV_MACRO_MESSAGE_V4 = &7.
+
+  CALL FUNCTION 'Z_SVF_LOG_WRITE'
+  EXPORTING
+  PRINT_KEY                    = &1
+  MESSAGE_TYPE                 = &2
+  ID                           = 'ZSVF'
+  MESSAGE_NUMBER               = &3
+  MESSAGE                      = GV_MACRO_MESSAGE
+  MESSAGE_V1                   = GV_MACRO_MESSAGE_V1
+  MESSAGE_V2                   = GV_MACRO_MESSAGE_V2
+  MESSAGE_V3                   = GV_MACRO_MESSAGE_V3
+  MESSAGE_V4                   = GV_MACRO_MESSAGE_V4
+  EXCEPTIONS
+  GUID_GENERATION_ERROR        = 1
+  INSERT_LOG_TABLE_ERROR       = 2
+  OTHERS                       = 3.
+END-OF-DEFINITION. "DEFINE MACRO_SVF_LOG_WRITE.
+
+*&---------------------------------------------------------------------*
+*&   MACRO_SVF_LOG_WRITE_1
+*&---------------------------------------------------------------------*
+DEFINE MACRO_SVF_LOG_WRITE_1.
+* CAUTION: The default message class is 'ZSVF'.
+*          Without print request key
+
+* &1 = Message Type
+* &2 = Message Number
+* &3 = Message Variant 1
+* &4 = Message Variant 2
+* &5 = Message Variant 3
+* &6 = Message Variant 4
+
+  CLEAR GV_MACRO_MESSAGE.
+  GV_MACRO_MESSAGE_V1 = &3.
+  GV_MACRO_MESSAGE_V2 = &4.
+  GV_MACRO_MESSAGE_V3 = &5.
+  GV_MACRO_MESSAGE_V4 = &6.
+
+  CALL FUNCTION 'Z_SVF_LOG_WRITE'
+  EXPORTING
+  MESSAGE_TYPE                 = &1
+  ID                           = 'ZSVF'
+  MESSAGE_NUMBER               = &2
+  MESSAGE                      = GV_MACRO_MESSAGE
+  MESSAGE_V1                   = GV_MACRO_MESSAGE_V1
+  MESSAGE_V2                   = GV_MACRO_MESSAGE_V2
+  MESSAGE_V3                   = GV_MACRO_MESSAGE_V3
+  MESSAGE_V4                   = GV_MACRO_MESSAGE_V4
+  EXCEPTIONS
+  GUID_GENERATION_ERROR        = 1
+  INSERT_LOG_TABLE_ERROR       = 2
+  OTHERS                       = 3.
+END-OF-DEFINITION. "DEFINE MACRO_SVF_LOG_WRITE_1.
+
+*&---------------------------------------------------------------------*
+*&   MACRO_SVF_LOG_WRITE_2
+*&---------------------------------------------------------------------*
+DEFINE MACRO_SVF_LOG_WRITE_2.
+
+* &1 = Print Request Key
+* &2 = Message Type
+* &3 = Message Number
+* &4 = Message Variant 1
+* &5 = Message Variant 2
+* &6 = Message Variant 3
+* &7 = Message Variant 4
+* &8 - Message ID
+
+  CLEAR GV_MACRO_MESSAGE.
+  GV_MACRO_MESSAGE_V1 = &4.
+  GV_MACRO_MESSAGE_V2 = &5.
+  GV_MACRO_MESSAGE_V3 = &6.
+  GV_MACRO_MESSAGE_V4 = &7.
+
+  CALL FUNCTION 'Z_SVF_LOG_WRITE'
+  EXPORTING
+  PRINT_KEY                    = &1
+  MESSAGE_TYPE                 = &2
+  ID                           = &8
+  MESSAGE_NUMBER               = &3
+  MESSAGE                      = GV_MACRO_MESSAGE
+*    LOG_NO                       =
+*    LOG_MSG_NO                   =
+  MESSAGE_V1                   = GV_MACRO_MESSAGE_V1
+  MESSAGE_V2                   = GV_MACRO_MESSAGE_V2
+  MESSAGE_V3                   = GV_MACRO_MESSAGE_V3
+  MESSAGE_V4                   = GV_MACRO_MESSAGE_V4
+  EXCEPTIONS
+  GUID_GENERATION_ERROR        = 1
+  INSERT_LOG_TABLE_ERROR       = 2
+  OTHERS                       = 3.
+END-OF-DEFINITION. "DEFINE MACRO_SVF_LOG_WRITE_2.
+
+*&---------------------------------------------------------------------*
+*&   MACRO_SVF_LOG_WRITE_3
+*&---------------------------------------------------------------------*
+DEFINE MACRO_SVF_LOG_WRITE_3.
+* CAUTION: The default message class is 'ZSVF',
+*          message number is '000',
+*          message not in message class ZSVF
+
+* &1 = Print Request Key
+* &2 = Message Type
+* &3 = Message
+
+  GV_MACRO_MESSAGE = &3.
+
+  CALL FUNCTION 'Z_SVF_LOG_WRITE'
+  EXPORTING
+  PRINT_KEY                    = &1
+  MESSAGE_TYPE                 = &2
+  ID                           = 'ZSVF'
+  MESSAGE_NUMBER               = '000'
+  MESSAGE                      = GV_MACRO_MESSAGE
+  EXCEPTIONS
+  GUID_GENERATION_ERROR        = 1
+  INSERT_LOG_TABLE_ERROR       = 2
+  OTHERS                       = 3.
+END-OF-DEFINITION. "DEFINE MACRO_SVF_LOG_WRITE_3
+
+*&---------------------------------------------------------------------*
+*&   MACRO_CONVERT_TO_MSEHT
+*&---------------------------------------------------------------------*
+DEFINE MACRO_CONVERT_TO_MSEHT.
+  CLEAR &2.
+  IF &1 IS NOT INITIAL.
+    SELECT SINGLE mseht FROM t006a INTO (&2)
+      WHERE spras = '1' AND msehi = &1.
+    IF sy-subrc <> 0.
+      SELECT SINGLE mseht FROM t006a INTO (&2)
+        WHERE msehi = &1.
+    ENDIF.
+  ENDIF.
+END-OF-DEFINITION.
+
+*&---------------------------------------------------------------------*
+*&   MACRO_CONVERT_TO_MSEHT
+*&---------------------------------------------------------------------*
+DEFINE MACRO_CONVERT_TO_MSEH6.
+  CLEAR &2.
+  IF &1 IS NOT INITIAL.
+    SELECT SINGLE mseh6 FROM t006a INTO (&2)
+      WHERE spras = '1' AND msehi = &1.
+    IF sy-subrc <> 0.
+      SELECT SINGLE mseh6 FROM t006a INTO (&2)
+        WHERE msehi = &1.
+    ENDIF.
+  ENDIF.
+END-OF-DEFINITION.
+*&---------------------------------------------------------------------*
+*&      Macro
+*&---------------------------------------------------------------------*
+DEFINE MACRO_CONCATENATE_STR.
+  CLEAR GV_MACRO_STR.
+  GV_MACRO_STR = &1.
+  SHIFT GV_MACRO_STR LEFT DELETING LEADING '0'.
+  CONCATENATE &2 GV_MACRO_STR INTO &2.
+END-OF-DEFINITION.
+*&---------------------------------------------------------------------*
+*&      Macro
+*&---------------------------------------------------------------------*
+DEFINE MACRO_CLEAR_STRINGS.
+  CLEAR: GV_STR_01, GV_STR_02, GV_STR_03, GV_STR_04, GV_STR_05,
+         GV_STR_06, GV_STR_07, GV_STR_08, GV_STR_09, GV_STR_10.
+END-OF-DEFINITION.
+*&---------------------------------------------------------------------*
+*&      Macro
+*&---------------------------------------------------------------------*
+DEFINE MACRO_CONCATENATE_STRINGS.
+  CONCATENATE GV_STR_01 GV_STR_02 GV_STR_03 GV_STR_04 GV_STR_05
+              GV_STR_06 GV_STR_07 GV_STR_08 GV_STR_09 GV_STR_10
+              INTO &1 SEPARATED BY &2.
+  CONDENSE &1.
+END-OF-DEFINITION.
+*&---------------------------------------------------------------------*
+*&      Form  FRM_DDIF_FIELDINFO_GET
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+*      -->P_LT_DFIES_TAB  text
+*      -->P_PV_TABNAME  text
+*----------------------------------------------------------------------*
+FORM FRM_DDIF_FIELDINFO_GET  TABLES   PT_DFIES_TAB STRUCTURE DFIES
+                             USING    PV_TABNAME TYPE DDOBJNAME.
+
+  DATA: LT_DFIES_TAB TYPE TABLE OF DFIES.
+
+  CALL FUNCTION 'DDIF_FIELDINFO_GET'
+    EXPORTING
+      TABNAME        = PV_TABNAME
+*     FIELDNAME      = ' '
+      LANGU          = '1'
+*     LFIELDNAME     = ' '
+*     ALL_TYPES      = ' '
+*     GROUP_NAMES    = ' '
+*     UCLEN          =
+*     DO_NOT_WRITE   = ' '
+*     IMPORTING
+*     X030L_WA       =
+*     DDOBJTYPE      =
+*     DFIES_WA       =
+*     LINES_DESCR    =
+    TABLES
+      DFIES_TAB      = LT_DFIES_TAB
+*     FIXED_VALUES   =
+    EXCEPTIONS
+      NOT_FOUND      = 1
+      INTERNAL_ERROR = 2
+      OTHERS         = 3.
+
+  IF SY-SUBRC <> 0.
+    CLEAR LT_DFIES_TAB[].
+    RETURN.
+  ENDIF.
+
+  APPEND LINES OF LT_DFIES_TAB TO PT_DFIES_TAB.
+
+ENDFORM.                    " FRM_DDIF_FIELDINFO_GET
+*&---------------------------------------------------------------------*
+*&      Form  FRM_DDIF_FIELDINFO_GET_LANGU
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+*      -->P_LT_DFIES_TAB  text
+*      -->P_PV_TABNAME  text
+*----------------------------------------------------------------------*
+FORM FRM_DDIF_FIELDINFO_GET_LANGU  TABLES   PT_DFIES_TAB STRUCTURE DFIES
+                                   USING    PV_TABNAME TYPE DDOBJNAME
+                                            P_LANGU TYPE SY-LANGU.
+
+  DATA: LT_DFIES_TAB TYPE TABLE OF DFIES.
+
+  CALL FUNCTION 'DDIF_FIELDINFO_GET'
+    EXPORTING
+      TABNAME        = PV_TABNAME
+*     FIELDNAME      = ' '
+      LANGU          = P_LANGU
+*     LFIELDNAME     = ' '
+*     ALL_TYPES      = ' '
+*     GROUP_NAMES    = ' '
+*     UCLEN          =
+*     DO_NOT_WRITE   = ' '
+*     IMPORTING
+*     X030L_WA       =
+*     DDOBJTYPE      =
+*     DFIES_WA       =
+*     LINES_DESCR    =
+    TABLES
+      DFIES_TAB      = LT_DFIES_TAB
+*     FIXED_VALUES   =
+    EXCEPTIONS
+      NOT_FOUND      = 1
+      INTERNAL_ERROR = 2
+      OTHERS         = 3.
+
+  IF SY-SUBRC <> 0.
+    CLEAR LT_DFIES_TAB[].
+    RETURN.
+  ENDIF.
+
+  APPEND LINES OF LT_DFIES_TAB TO PT_DFIES_TAB.
+
+ENDFORM.                    " FRM_DDIF_FIELDINFO_GET
+*&---------------------------------------------------------------------*
+*&   FRM_FLTP_TO_CHAR_CONVERSION
+*&---------------------------------------------------------------------*
+FORM FRM_FLTP_TO_CHAR_CONVERSION USING P_NUMBER_OF_DIGITS
+                                       P_FLTP_VALUE
+                                 CHANGING P_CHAR_FIELD.
+
+  DATA: LV_NUMBER_OF_DIGITS TYPE CHA_CLASS_DATA-STELLEN,
+        LV_FLTP_VALUE       TYPE CHA_CLASS_DATA-SOLLWERT,
+        LV_CHAR_FIELD       TYPE CHA_CLASS_VIEW-SOLLWERT.
+
+  LV_NUMBER_OF_DIGITS = P_NUMBER_OF_DIGITS.
+  LV_FLTP_VALUE = P_FLTP_VALUE.
+
+  CALL FUNCTION 'QSS0_FLTP_TO_CHAR_CONVERSION'
+    EXPORTING
+      I_NUMBER_OF_DIGITS = LV_NUMBER_OF_DIGITS
+      I_FLTP_VALUE       = LV_FLTP_VALUE
+*     I_VALUE_NOT_INITIAL_FLAG       = 'X'
+*     I_SCREEN_FIELDLENGTH           = 16
+    IMPORTING
+      E_CHAR_FIELD       = LV_CHAR_FIELD.
+
+  P_CHAR_FIELD = LV_CHAR_FIELD.
+
+ENDFORM.
+
+*&---------------------------------------------------------------------*
+*&   MACRO_FLTP_TO_CHAR_1
+*&---------------------------------------------------------------------*
+DEFINE MACRO_FLTP_TO_CHAR_1. "###########
+  CLEAR &3.   "output string
+  PERFORM frm_fltp_to_char_conversion USING &1 "NUMBER_OF_DIGITS
+                                            &2 "FLTP_VALUE
+                                      CHANGING GV_MACRO_STR.
+  CONDENSE GV_MACRO_STR.
+  &3 = GV_MACRO_STR.
+END-OF-DEFINITION.
+
+*&---------------------------------------------------------------------*
+*&   MACRO_FLTP_TO_CHAR_2
+*&---------------------------------------------------------------------*
+DEFINE MACRO_FLTP_TO_CHAR_2. "####################
+* &1 FLTP_VALUE
+* &2 NUMBER_OF_DIGITS
+* &3 VALUE NOT INITIAL IF SET
+* &4 OUTPUT STRING
+  CLEAR: &4, GV_MACRO_STR.   "output string
+  IF &1 IS NOT INITIAL OR &3 = 'X'. "&3 = Value Not Initial if Set
+    PERFORM frm_fltp_to_char_conversion USING &2 "NUMBER_OF_DIGITS
+                                              &1 "FLTP_VALUE
+                                        CHANGING GV_MACRO_STR.
+    CONDENSE GV_MACRO_STR.
+  ENDIF.
+  &4 = GV_MACRO_STR.
+END-OF-DEFINITION.
+
+*&---------------------------------------------------------------------*
+*&      Form  FRM_GET_SMTP_ADDR
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+*      -->P_BNAME  text
+*      <--P_SMTP_ADDR  text
+*----------------------------------------------------------------------*
+FORM FRM_GET_SMTP_ADDR_PRCRID  USING    P_BNAME
+                               CHANGING P_SMTP_ADDR.
+
+  DATA: LV_BNAME      TYPE USR21-BNAME,
+        LV_ADDRNUMBER TYPE USR21-ADDRNUMBER.
+
+  CLEAR P_SMTP_ADDR.
+  CHECK P_BNAME IS NOT INITIAL.
+  LV_BNAME = P_BNAME.
+  CONDENSE LV_BNAME NO-GAPS.
+  TRANSLATE LV_BNAME TO UPPER CASE.
+
+  SELECT SINGLE ADDRNUMBER
+    INTO LV_ADDRNUMBER
+    FROM USR21
+    WHERE BNAME = LV_BNAME.
+
+  CHECK SY-SUBRC = 0.
+
+  SELECT SINGLE SMTP_ADDR
+    INTO P_SMTP_ADDR
+    FROM ADR6
+    WHERE ADDRNUMBER = LV_ADDRNUMBER.
+
+ENDFORM.                    " FRM_GET_SMTP_ADDR
+*&---------------------------------------------------------------------*
+*&      Form  FRM_GET_SMTP_ADDR
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+*      -->P_BNAME  text
+*      <--P_SMTP_ADDR  text
+*----------------------------------------------------------------------*
+FORM FRM_GET_SMTP_ADDR_USERID  USING    P_USER_ID
+                               CHANGING P_EMAIL_ADDRESS.
+
+  DATA: LV_SUBRC       TYPE SY-SUBRC,
+        LT_ERROR_TABLE TYPE TABLE OF RPBENERR.
+
+  CALL FUNCTION 'HR_FBN_GET_USER_EMAIL_ADDRESS'
+    EXPORTING
+      USER_ID       = P_USER_ID
+      REACTION      = 'S'
+    IMPORTING
+      EMAIL_ADDRESS = P_EMAIL_ADDRESS
+      SUBRC         = LV_SUBRC
+    TABLES
+      ERROR_TABLE   = LT_ERROR_TABLE.
+
+ENDFORM.                    " FRM_GET_SMTP_ADDR
+*&---------------------------------------------------------------------*
+*&      Form  FRM_LOCK_ZSVF001_DATA
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+*      -->P_PRINT_KEY  text
+*      <--P_ERROR  text
+*----------------------------------------------------------------------*
+FORM FRM_LOCK_ZSVF001_DATA  USING    P_PRINT_KEY TYPE ZSVF001_KEY
+                            CHANGING P_LOCKED TYPE C.
+
+  CLEAR P_LOCKED.
+
+  DO 2 TIMES.
+    CALL FUNCTION 'ENQUEUE_EZSVF001'
+      EXPORTING
+*       MODE_ZSVF001   = 'E'
+*       MANDT          = SY-MANDT
+        ZSVF_DOC_TYPE  = P_PRINT_KEY-ZSVF_DOC_TYPE
+        ZSVF_DOC_NUM   = P_PRINT_KEY-ZSVF_DOC_NUM
+        ZSVF_DOC_ITEM  = P_PRINT_KEY-ZSVF_DOC_ITEM
+        ZSVF_DOC_ID    = P_PRINT_KEY-ZSVF_DOC_ID
+        ZSVF_PRT_NO    = P_PRINT_KEY-ZSVF_PRT_NO
+*       X_ZSVF_DOC_TYPE       = ' '
+*       X_ZSVF_DOC_NUM = ' '
+*       X_ZSVF_DOC_ITEM       = ' '
+*       X_ZSVF_DOC_ID  = ' '
+*       X_ZSVF_PRT_NO  = ' '
+*       _SCOPE         = '2'
+*       _WAIT          = ' '
+*       _COLLECT       = ' '
+      EXCEPTIONS
+        FOREIGN_LOCK   = 1
+        SYSTEM_FAILURE = 2
+        OTHERS         = 3.
+    IF SY-SUBRC <> 0.
+      WAIT UP TO 1 SECONDS.
+    ELSE.
+      P_LOCKED = 'X'.
+      EXIT. "exit do
+    ENDIF.
+  ENDDO.
+
+  IF P_LOCKED <> 'X'.
+* Error Log
+    MACRO_SVF_LOG_WRITE_2 P_PRINT_KEY "Print request Key
+                          'E'      "Message Type
+                          SY-MSGNO "Message Number
+                          SY-MSGV1 "Message Variant 1
+                          SY-MSGV2 "Message Variant 2
+                          SY-MSGV3 "Message Variant 3
+                          SY-MSGV4 "Message Variant 4
+                          SY-MSGID."Message ID
+  ENDIF.
+
+ENDFORM.                    " FRM_LOCK_ZSVF001_DATA
+*&---------------------------------------------------------------------*
+*&      Form  FRM_UNLOCK_ZSVF001_DATA
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+*      -->P_GW_PRINT_KEY  text
+*----------------------------------------------------------------------*
+FORM FRM_UNLOCK_ZSVF001_DATA  USING    P_PRINT_KEY TYPE ZSVF001_KEY.
+
+  CALL FUNCTION 'DEQUEUE_EZSVF001'
+    EXPORTING
+*     MODE_ZSVF001  = 'E'
+*     MANDT         = SY-MANDT
+      ZSVF_DOC_TYPE = P_PRINT_KEY-ZSVF_DOC_TYPE
+      ZSVF_DOC_NUM  = P_PRINT_KEY-ZSVF_DOC_NUM
+      ZSVF_DOC_ITEM = P_PRINT_KEY-ZSVF_DOC_ITEM
+      ZSVF_DOC_ID   = P_PRINT_KEY-ZSVF_DOC_ID
+      ZSVF_PRT_NO   = P_PRINT_KEY-ZSVF_PRT_NO
+*     X_ZSVF_DOC_TYPE       = ' '
+*     X_ZSVF_DOC_NUM        = ' '
+*     X_ZSVF_DOC_ITEM       = ' '
+*     X_ZSVF_DOC_ID = ' '
+*     X_ZSVF_PRT_NO = ' '
+*     _SCOPE        = '3'
+*     _SYNCHRON     = ' '
+*     _COLLECT      = ' '
+    .
+
+ENDFORM.                    " FRM_UNLOCK_ZSVF001_DATA
+*&---------------------------------------------------------------------*
+*&      Form  FRM_PROCESS_EXEC_PROTOCAL
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+*      -->P_EXEC_PROTOCOL  text
+*      <--P_SVF_ERROR  text
+*----------------------------------------------------------------------*
+FORM FRM_PROCESS_EXEC_PROTOCAL  TABLES   PT_EXEC_PROTOCAL STRUCTURE BTCXPM
+                                CHANGING P_SVF_ERROR.
+* CAUTION: If need to change the regular expression here, please test it with
+*          program DEMO_REGEX_TOY.
+
+* Successful status:
+* 46  Job(DCC_201RDEPRTN00)******UCXSingle Result: 0
+* 56  Job(DCC_201RDEPRTN00)******Universal Connect/X Result: 0
+
+* Exception status:
+* 46 Job(DCC_011RDEPRTN00)******UCXSingle Result: 0
+* 59 Job(DCC_011RDEPRTN00)******Universal Connect/X Result: -155
+
+  DATA: LW_EXEC_PROTOCAL TYPE BTCXPM,
+        LV_MATCH_COUNT   TYPE I,
+        LV_PATTERN       TYPE CHAR100,
+        LV_TEXT          TYPE STRING,
+        LT_EXEC_PROTOCAL TYPE TABLE OF BTCXPM.
+
+  FIELD-SYMBOLS: <LW_EXEC_PROTOCAL> TYPE BTCXPM.
+
+  CLEAR P_SVF_ERROR.
+  CHECK PT_EXEC_PROTOCAL[] IS NOT INITIAL.
+
+  LT_EXEC_PROTOCAL[] = PT_EXEC_PROTOCAL[].
+  LOOP AT LT_EXEC_PROTOCAL ASSIGNING <LW_EXEC_PROTOCAL>.
+    CONDENSE <LW_EXEC_PROTOCAL>-MESSAGE.
+    CONCATENATE <LW_EXEC_PROTOCAL>-MESSAGE '.'
+           INTO <LW_EXEC_PROTOCAL>-MESSAGE.
+  ENDLOOP.
+
+  LV_PATTERN = 'UCXSingle Result: 0\D'. "Regular Expression
+  CLEAR LV_MATCH_COUNT.
+  FIND FIRST OCCURRENCE OF REGEX LV_PATTERN IN TABLE LT_EXEC_PROTOCAL
+                     MATCH COUNT LV_MATCH_COUNT.
+  IF LV_MATCH_COUNT < 1.
+    P_SVF_ERROR = 'X'.
+    RETURN.
+  ENDIF.
+
+  LV_PATTERN = 'Universal Connect/X Result: -155\D'. "Regular Expression
+  CLEAR LV_MATCH_COUNT.
+  FIND FIRST OCCURRENCE OF REGEX LV_PATTERN IN TABLE LT_EXEC_PROTOCAL
+                     MATCH COUNT LV_MATCH_COUNT.
+  IF LV_MATCH_COUNT >= 1.
+    P_SVF_ERROR = '1'.
+    RETURN.
+  ENDIF.
+
+  LV_PATTERN = 'Universal Connect/X Result: 0\D'. "Regular Expression
+  CLEAR LV_MATCH_COUNT.
+  FIND FIRST OCCURRENCE OF REGEX LV_PATTERN IN TABLE LT_EXEC_PROTOCAL
+                     MATCH COUNT LV_MATCH_COUNT.
+  IF LV_MATCH_COUNT < 1.
+    P_SVF_ERROR = 'X'.
+    RETURN.
+  ENDIF.
+
+ENDFORM.                    " FRM_PROCESS_EXEC_PROTOCAL
+*&---------------------------------------------------------------------*
+*&      Form  FRM_CHECK_TAB_NAME
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+*      -->P_TABNAME  text
+*      <--P_TAB_FOUND  text
+*----------------------------------------------------------------------*
+FORM FRM_CHECK_TAB_NAME  USING    P_TABNAME   TYPE DD02L-TABNAME
+                         CHANGING P_TAB_FOUND TYPE C.
+
+  CLEAR P_TAB_FOUND.
+  CHECK P_TABNAME IS NOT INITIAL.
+
+  CALL FUNCTION 'CHECK_TAB_NAME'
+    EXPORTING
+      I_TABNAME     = P_TABNAME
+    EXCEPTIONS
+      TAB_NOT_FOUND = 1
+      OTHERS        = 2.
+  IF SY-SUBRC = 0.
+    P_TAB_FOUND = 'X'.
+  ENDIF.
+
+ENDFORM.                    " FRM_CHECK_TAB_NAME
+*&---------------------------------------------------------------------*
+*&      Form  FRM_CONVERT_DOC_TO_CSV_LAPT
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+*      -->P_DOC_HEADER  text
+*      <--P_CSV_HEADER  text
+*----------------------------------------------------------------------*
+FORM FRM_CONVERT_DOC_TO_CSV_LAPT TABLES   PT_HEADER "STRUCTURE ZSVF_CSV_HEADER_LAPT
+                                 USING    PW_ZSVF010 TYPE ZSVF010.
+  DATA: LV_ZSVF_SELNO TYPE I,
+        LV_LABEL_QUAN TYPE I,
+        LW_HEADER     TYPE ZSVF_CSV_HEADER_LAPT.
+
+* ## ZSVF_MATNAM
+* ## CHARG
+* #### ZSVF_MATLOT
+  MOVE-CORRESPONDING PW_ZSVF010 TO LW_HEADER.
+
+* #### HSDAT
+** 2015-01-21 #############
+**            ###### AFKO-GSTRP### YYYY-MM
+*  CONCATENATE PW_ZSVF010-GSTRP+0(4)
+*              '-'
+*              PW_ZSVF010-GSTRP+4(2)
+*              INTO LW_HEADER-HSDAT.
+* 2015-04-22
+  CALL FUNCTION 'Z_SVF_GET_MANUFACTURE_DATE'
+    EXPORTING
+      I_GSTRP = PW_ZSVF010-GSTRP
+      I_HSDAT = PW_ZSVF010-HSDAT
+    IMPORTING
+      O_HSDAT = LW_HEADER-HSDAT.
+
+* Print out 000 to <ZSVF_LABLQTY> labels
+* Label 000 will be used to adjust the print-outs
+  LV_LABEL_QUAN = PW_ZSVF010-ZSVF_LABLQTY + 1.
+  DO LV_LABEL_QUAN TIMES.
+
+* ## ZSVF_SELNO
+    LW_HEADER-ZSVF_SELNO = LV_ZSVF_SELNO. "##
+    CALL FUNCTION 'CONVERSION_EXIT_ALPHA_INPUT'
+      EXPORTING
+        INPUT  = LW_HEADER-ZSVF_SELNO
+      IMPORTING
+        OUTPUT = LW_HEADER-ZSVF_SELNO.
+
+* ###(QR Code) ZSVF_BARCODE
+    CONCATENATE PW_ZSVF010-ZSVF_BC1_P1
+                LW_HEADER-ZSVF_SELNO
+                PW_ZSVF010-ZSVF_BC1_P2 "##
+                INTO LW_HEADER-ZSVF_BARCODE "###(QR Code)
+                SEPARATED BY GC_LABEL_SEPERATOR.
+
+    LV_ZSVF_SELNO = LV_ZSVF_SELNO + 1. " ####
+    APPEND LW_HEADER TO PT_HEADER.
+
+  ENDDO. "DO LV_LABEL_QUAN TIMES.
+
+ENDFORM.                    " FRM_CONVERT_DOC_TO_CSV_LAPT
+*&---------------------------------------------------------------------*
+*&      Form  FRM_GET_HEADER_LTEXT_PURO
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+*      -->P_<LW_HEADER>  text
+*----------------------------------------------------------------------*
+FORM FRM_GET_HEADER_LTEXT_PURO  USING PW_ZSVF008 TYPE ZSVF008
+                                CHANGING PW_HEADER TYPE ZSVF_CSV_HEADER_PURO.
+
+  DATA: LV_STR_LTEXT TYPE STRING.
+
+* Get header long text
+  CALL FUNCTION 'Z_SVF_GET_PO_LONG_TEXT'
+    EXPORTING
+      OBJECT        = 'EKKO'
+      ID            = 'F01'
+      EBELN         = PW_ZSVF008-EBELN
+*     EBELP         =
+      LANGUAGE      = PW_ZSVF008-SPRAS
+    IMPORTING
+      LONG_TEXT_STR = LV_STR_LTEXT.
+
+  PW_HEADER-ZSVF_POHTXT = LV_STR_LTEXT.
+
+* Get payment term text
+  CALL FUNCTION 'Z_SVF_GET_PAYMENT_DESCRIPTION'
+    EXPORTING
+      I_ZTERM     = PW_ZSVF008-ZTERM
+      I_SPRAS     = PW_ZSVF008-ZSVF_SPRAS "SVF form language
+    IMPORTING
+      O_SVF_ZTERM = PW_HEADER-ZSVF_ZTERM.
+
+ENDFORM.                    " FRM_GET_HEADER_LTEXT_PURO
+*&---------------------------------------------------------------------*
+*&      Form  FRM_GET_ITEM_LTEXT_PURO
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+*      -->P_<LW_DOC_HEADER>  text
+*      -->P_<LW_DOC_ITEM>  text
+*      <--P_<LW_ITEM>  text
+*----------------------------------------------------------------------*
+FORM FRM_GET_ITEM_LTEXT_PURO  USING    PW_ZSVF008 TYPE ZSVF008
+                                       PW_ZSVF009 TYPE ZSVF009
+                              CHANGING PW_ITEM TYPE ZSVF_CSV_ITEM_PURO.
+  DATA: LV_STR_LTEXT TYPE STRING.
+
+* Long text ####
+  CALL FUNCTION 'Z_SVF_GET_PO_LONG_TEXT'
+    EXPORTING
+      OBJECT        = 'EKPO'
+      ID            = 'F01'
+      EBELN         = PW_ZSVF008-EBELN
+      EBELP         = PW_ZSVF009-EBELP
+      LANGUAGE      = PW_ZSVF008-SPRAS "PO language
+    IMPORTING
+      LONG_TEXT_STR = LV_STR_LTEXT.
+
+  PW_ITEM-ZSVF_RMKTXT = LV_STR_LTEXT.
+
+ENDFORM.                    " FRM_GET_ITEM_LTEXT_PURO
+*&---------------------------------------------------------------------*
+*&      Form  FRM_GET_HEADER_LTEXT_GRPO
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+*      -->P_<LW_DOC_HEADER>  text
+*      <--P_<LW_HEADER>  text
+*----------------------------------------------------------------------*
+FORM FRM_GET_HEADER_LTEXT_GRPO  USING    PW_ZSVF011 TYPE ZSVF011
+                                CHANGING PW_HEADER TYPE ZSVF_CSV_HEADER_GRPO.
+
+  FIELD-SYMBOLS: <FIELD> TYPE ANY.
+
+* Get payment term text (PO header data)
+  ASSIGN COMPONENT 'ZSVF_ZTERM' OF STRUCTURE PW_HEADER TO <FIELD>.
+  IF SY-SUBRC = 0.
+    CALL FUNCTION 'Z_SVF_GET_PAYMENT_DESCRIPTION'
+      EXPORTING
+        I_ZTERM     = PW_ZSVF011-ZTERM
+        I_SPRAS     = PW_ZSVF011-ZSVF_SPRAS
+      IMPORTING
+        O_SVF_ZTERM = <FIELD>.
+  ENDIF.
+
+* Get item long text
+  ASSIGN COMPONENT 'ZSVF_RMKTXT' OF STRUCTURE PW_HEADER TO <FIELD>.
+  IF SY-SUBRC = 0.
+    CALL FUNCTION 'Z_SVF_GET_PO_LONG_TEXT'
+      EXPORTING
+        OBJECT        = 'EKPO'
+        ID            = 'F01'
+        EBELN         = PW_ZSVF011-EBELN
+        EBELP         = PW_ZSVF011-EBELP
+        LANGUAGE      = PW_ZSVF011-SPRAS
+      IMPORTING
+        LONG_TEXT_STR = <FIELD>.
+  ENDIF.
+
+ENDFORM.                    " FRM_GET_HEADER_LTEXT_GRPO
+*&---------------------------------------------------------------------*
+*&      Form  FRM_LOCK_PROGRAM
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+*      -->P_PROGRAM  text
+*----------------------------------------------------------------------*
+FORM FRM_LOCK_PROGRAM  USING    P_PROGRAM TYPE TRDIR-NAME
+                       CHANGING P_LOCKED TYPE C.
+
+  CALL FUNCTION 'ENQUEUE_E_TRDIR'
+    EXPORTING
+      NAME           = P_PROGRAM
+      _SCOPE         = '1'
+    EXCEPTIONS
+      FOREIGN_LOCK   = 1
+      SYSTEM_FAILURE = 2
+      OTHERS         = 3.
+
+  IF SY-SUBRC = 0.
+    P_LOCKED = 'X'.
+  ENDIF.
+
+ENDFORM.                    " FRM_LOCK_PROGRAM
+*&---------------------------------------------------------------------*
+*&      Form  FRM_UNLOCK_PROGRAM
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+*      -->P_PROGRAM  text
+*----------------------------------------------------------------------*
+FORM FRM_UNLOCK_PROGRAM  USING    P_PROGRAM TYPE TRDIR-NAME.
+
+  CALL FUNCTION 'DEQUEUE_E_TRDIR'
+    EXPORTING
+      NAME   = P_PROGRAM
+      _SCOPE = '1'.
+
+ENDFORM.                    " FRM_UNLOCK_PROGRAM
