@@ -1,6 +1,6 @@
 ﻿# ABAP Object Factory Implementation  
 
-This is simple program to implement factory design. 
+This is a simple program to implement factory design. 
 
 1. Factory design is used to abstract the process of creating objects, so the type of object created can be specified at runtime.  
    
