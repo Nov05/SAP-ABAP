@@ -18,7 +18,7 @@ This is a simple example of ABAP implementation of factory design.
 <b>ABAP Factory Method Design Pattern UML Diagram</b> 
 </p>  
 
-3. This program creats either a `Sales Order` object or a `Sales Quotation` at runtime.
+3. This program creats either a `Sales Order` object or a `Sales Quotation` object at runtime.
 
 #### Execution Result   
 
