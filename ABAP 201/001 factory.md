@@ -10,7 +10,7 @@ This is a simple example of ABAP implementation of factory design.
 <b>Object-Oriented Factory Method Design Pattern UML</b>   
 </p>
 
-2. ABAP interface object is in use in this case.   
+2. ABAP interface class is in use in this case.   
  
 <p align="center">        
 <img src="https://github.com/Nov05/pictures/blob/master/ABAP%20201/2019-10-14%20abap%20factory%20uml.png?raw=true" width=400>
