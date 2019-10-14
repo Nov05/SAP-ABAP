@@ -9,10 +9,10 @@ This is simple program to implement factory design.
 </p>
 
 2. ABAP interface object is in use in this case.    
-<p align="center"> 
-*ABAP Factory Method Design Pattern UML Diagram*     
+<p align="center">   
+<b>ABAP Factory Method Design Pattern UML Diagram</b><br>      
 <img src="https://github.com/Nov05/pictures/blob/master/ABAP%20201/2019-10-14%20abap%20factory%20uml.png?raw=true" width=400>    
-</p>
+</p>  
 
 3. This program creats either a `Sales Order` object or a `Sales Quotation` at runtime.
 
