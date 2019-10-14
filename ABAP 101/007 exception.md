@@ -58,3 +58,8 @@ TRY.
     WRITE: '        ', 'Source position:', TEXT, /.
 ENDTRY.
 ```
+
+Reference:  
+https://wiki.scn.sap.com/wiki/display/ABAP/Exception+Handling+in+ABAP+object+with+the+help+of+Exception+Class  
+
+<img src="https://wiki.scn.sap.com/wiki/download/attachments/64259785/exception_handling_3.GIF?version=1&modificationDate=1228299550000&api=v2" width=400>
