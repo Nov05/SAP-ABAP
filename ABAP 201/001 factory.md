@@ -1,12 +1,15 @@
 ﻿# ABAP Object Factory Implementation  
 
+This is simple program to implement factory design. Factory design is used to abstract the process of creating objects so the type of object created can be specified at run-time.
+
 #### Object-Oriented Factory Method Design Pattern UML
 
 <img src="https://www.abaptutorial.com/wp-content/uploads/2011/05/factorymethod.gif" width=400>
 
 #### ABAP Factory Method Design Pattern UML Diagram
 
-<img src="https://www.abaptutorial.com/wp-content/uploads/2011/05/factorymethod.png" width=400>  
+<img src="https://www.abaptutorial.com/wp-content/uploads/2011/05/factorymethod.png" width=400>    
+
 #### Execution Result   
 
 <img src="https://github.com/Nov05/pictures/blob/master/ABAP%20201/20191014_023743%20ABAP%20Object%20Factory.gif?raw=true">  
