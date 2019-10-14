@@ -5,7 +5,7 @@ This is simple program to implement factory design.
 1. Factory design is used to abstract the process of creating objects, so the type of object created can be specified at runtime.  
    
 <p align="center">  
-<img src="https://www.abaptutorial.com/wp-content/uploads/2011/05/factorymethod.gif" width=400 align=">  
+<img src="https://www.abaptutorial.com/wp-content/uploads/2011/05/factorymethod.gif" width=400>  
 <br>  
 <b>Object-Oriented Factory Method Design Pattern UML</b>   
 </p>
