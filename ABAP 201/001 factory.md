@@ -2,19 +2,15 @@
 
 This is simple program to implement factory design. 
 
-1. Factory design is used to abstract the process of creating objects so the type of object created can be specified at runtime.
-
-2. ABAP interface object is in use in this case.
-
-3. This program creats either a `Sales Order` object or a `Sales Quotation` at runtime.
-
-#### Object-Oriented Factory Method Design Pattern UML
-
+1. Factory design is used to abstract the process of creating objects, so the type of object created can be specified at runtime.  
+#### Object-Oriented Factory Method Design Pattern UML   
 <img src="https://www.abaptutorial.com/wp-content/uploads/2011/05/factorymethod.gif" width=400>
 
-#### ABAP Factory Method Design Pattern UML Diagram
-
+2. ABAP interface object is in use in this case.    
+#### ABAP Factory Method Design Pattern UML Diagram    
 <img src="https://github.com/Nov05/pictures/blob/master/ABAP%20201/2019-10-14%20abap%20factory%20uml.png?raw=true" width=400>    
+
+3. This program creats either a `Sales Order` object or a `Sales Quotation` at runtime.
 
 #### Execution Result   
 
