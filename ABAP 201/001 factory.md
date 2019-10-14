@@ -60,7 +60,7 @@ ENDCLASS.                    "cl_quotation  DEFINITIO
 *----------------------------------------------------------------------*
 CLASS cl_quotation IMPLEMENTATION.
   METHOD write.
-    WRITE: 'This is a Sales Quotation'.
+    WRITE: 'This is a Sales Quotation.'.
   ENDMETHOD.                    "write
 ENDCLASS.                    "cl_quotation IMPLEMENTATION
 *----------------------------------------------------------------------*
@@ -80,7 +80,7 @@ ENDCLASS.                    "cl_order  DEFINITIO
 *----------------------------------------------------------------------*
 CLASS cl_order IMPLEMENTATION.
   METHOD write.
-    WRITE: 'This is a Sales Order'.
+    WRITE: 'This is a Sales Order.'.
   ENDMETHOD.                    "write
 ENDCLASS.                    "cl_order IMPLEMENTATION
 *----------------------------------------------------------------------*
