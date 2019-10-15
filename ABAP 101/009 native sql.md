@@ -14,7 +14,7 @@ ENDEXEC.
  
 2. Native SQL can query database tables defined or not defined in ABAP Dictionary (DDIC). This is an example of querying a database table defined in DDIC without going through SAP database interface (the red line in the figure).
 
-<img src="https://github.com/Nov05/pictures/blob/master/ABAP%20101/database_access_through_native_sql_statement_170145.png?raw=true" width=500>
+<img src="https://github.com/Nov05/pictures/blob/master/ABAP%20101/database_access_through_native_sql_statement_170145_v2.png?raw=true" width=500>
 
 # Source Code
 
