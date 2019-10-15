@@ -13,7 +13,7 @@ SELECT *
   WHERE carrid = c1.
 ```
 
-2. However if commas is used in field list, you will have to use @ (new Open SQL syntax) to escape ABAP variables.
+2. However if comma is used in field list, you will have to use @ (new Open SQL syntax) to escape ABAP variables.
 ```
 SELECT SINGLE connid, cityfrom, cityto
   INTO @gw_spfli
