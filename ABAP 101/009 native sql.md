@@ -2,7 +2,7 @@
 
 This is a simple example of native SQL.
 
-1. Native SQL: In this case, database table name `SPFLI` and field names `CONNID, CITYFROM, CITYTO` have to be in uppercase.
+1. In this case, database table name `SPFLI` and field names `CONNID, CITYFROM, CITYTO` have to be in uppercase.
 ```
 EXEC SQL PERFORMING loop_output.
   select CONNID, CITYFROM, CITYTO
@@ -41,7 +41,7 @@ DATA: BEGIN OF wa,
 DATA: c1   TYPE spfli-carrid VALUE 'LH',
       text TYPE string.
 
-* table name and column names have to be in uppercase
+* table and column names have to be in uppercase
 TRY.
     EXEC SQL PERFORMING loop_output.
       select CONNID, CITYFROM, CITYTO
