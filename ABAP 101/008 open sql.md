@@ -21,6 +21,10 @@ SELECT SINGLE connid, cityfrom, cityto
   WHERE carrid = @c1.
 ```
 
+#### Execution Result   
+
+<img src="https://github.com/Nov05/pictures/blob/master/ABAP%20101/2019-10-15%2015_25_01-server.sapides.online_12299%20-%20Remote%20Desktop%20Connection.png?raw=true" width=400>  
+
 # Source Code
 
 ```
