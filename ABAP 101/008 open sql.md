@@ -1,6 +1,8 @@
 ﻿# Open SQL
 
-This is a simple SQL code example.
+This is a simple Open SQL example.
+
+<img src="https://github.com/Nov05/pictures/blob/master/ABAP%20101/database_access_through_open_sql_statement_170144.png?raw=true" width=500>  
 
 1. Select all fields from DDIC table `spfli` into inner table `gt_spfli`. In this case, old Open SQL syntax still works.
 ```
@@ -70,7 +72,8 @@ LOOP AT gt_spfli ASSIGNING <fs_spfli>.
 ENDLOOP.
 ```
 
-Reference:   
-https://blogs.sap.com/2017/02/17/why-the-new-open-sql-syntax-is-better/    
+Reference:      
 https://help.sap.com/doc/abapdocu_750_index_htm/7.50/en-US/abennews-750-open_sql.htm    
 https://help.sap.com/doc/abapdocu_751_index_htm/7.51/en-US/abennews-751-open_sql.htm   
+https://blogs.sap.com/2012/12/28/native-sql-its-use-with-database-connection-in-sap/   
+https://blogs.sap.com/2017/02/17/why-the-new-open-sql-syntax-is-better/    
