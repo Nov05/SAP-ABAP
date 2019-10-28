@@ -1,5 +1,9 @@
 ﻿
+### Input
+
 <img src="https://github.com/Nov05/pictures/blob/master/ABAP%20tricks/2019-10-28%2006_57_32-server.sapides.online_12269%20-%20Remote%20Desktop%20Connection.png?raw=true" width=600>
+
+### Output 
 
 <img src="https://github.com/Nov05/pictures/blob/master/ABAP%20tricks/2019-10-28%2006_57_07-server.sapides.online_12269%20-%20Remote%20Desktop%20Connection.png?raw=true" width=600>
 
