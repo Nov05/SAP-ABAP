@@ -1,0 +1,5 @@
+Description	2019-10-10 nov05
+Language	E
+
+Number	Message
+000	Hello SAP!

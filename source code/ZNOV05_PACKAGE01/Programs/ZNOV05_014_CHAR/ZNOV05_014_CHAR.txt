@@ -1,0 +1,49 @@
+*&---------------------------------------------------------------------*
+*& Report ZNOV05_014_CHAR
+*&---------------------------------------------------------------------*
+*& 2019-10-16 Created by Nov05
+*&---------------------------------------------------------------------*
+REPORT znov05_014_char.
+
+PARAMETERS: p_input TYPE string DEFAULT 'abap programming'.
+
+TYPES: BEGIN OF ty_count,
+         char  TYPE c,
+         count TYPE i,
+       END OF ty_count.
+DATA: gt_count TYPE STANDARD TABLE OF ty_count,
+      gw_count TYPE ty_count.
+FIELD-SYMBOLS: <fs_count> TYPE ty_count.
+
+DATA: str     TYPE string,
+      str_len TYPE i,
+      offset  TYPE i VALUE 0,
+      count   TYPE i,
+      text    TYPE string.
+
+str = p_input.
+TRANSLATE str TO UPPER CASE.
+CONDENSE str NO-GAPS.
+str_len = strlen( str ).
+
+CLEAR gt_count[].
+DO str_len TIMES.
+  READ TABLE gt_count WITH KEY char = str+offset(1) TRANSPORTING NO FIELDS.
+  IF sy-subrc <> 0. " count unique character only once
+    FIND ALL OCCURRENCES OF str+offset(1) IN str RESULTS DATA(gt_result).
+    DESCRIBE TABLE gt_result LINES count.
+    CLEAR gw_count.
+    gw_count-char = str+offset(1).
+    gw_count-count = count.
+    APPEND gw_count TO gt_count.
+  ENDIF.
+  offset = offset + 1.
+ENDDO.
+
+SORT gt_count BY count DESCENDING.
+READ TABLE gt_count ASSIGNING <fs_count> INDEX 1.
+IF sy-subrc = 0.
+  CONCATENATE '''' <fs_count>-char '''' INTO text.
+  WRITE: 'Maximum Occuring Character:', text.
+  WRITE: / 'Count:', <fs_count>-count.
+ENDIF.

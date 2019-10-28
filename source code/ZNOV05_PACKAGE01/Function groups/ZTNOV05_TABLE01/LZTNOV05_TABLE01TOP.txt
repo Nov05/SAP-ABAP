@@ -1,0 +1,6 @@
+* regenerated at 11.10.2019 05:36:28
+FUNCTION-POOL ZTNOV05_TABLE01            MESSAGE-ID SV.
+
+* INCLUDE LZTNOV05_TABLE01D...               " Local class definition
+  INCLUDE LSVIMDAT                                . "general data decl.
+  INCLUDE LZTNOV05_TABLE01T00                     . "view rel. data dcl.

@@ -1,0 +1,99 @@
+*&---------------------------------------------------------------------*
+*& Report ZNOV05_017_PERFORMANCE
+*&---------------------------------------------------------------------*
+*& 2019-10-16 Created by Nov05
+*&---------------------------------------------------------------------*
+REPORT znov05_017_performance.
+
+PARAMETERS p_input TYPE i DEFAULT 1.
+
+TYPES: BEGIN OF ty_count,
+         char  TYPE c,
+         count TYPE i,
+       END OF ty_count.
+DATA: gt_count TYPE STANDARD TABLE OF ty_count,
+      gw_count TYPE ty_count.
+FIELD-SYMBOLS: <fs_count> TYPE ty_count.
+
+DATA: str     TYPE string,
+      str_len TYPE i,
+      offset  TYPE i VALUE 0,
+      count   TYPE i,
+      text    TYPE string.
+
+str = '1223334444555556666667777777'.
+TRANSLATE str TO UPPER CASE.
+DO 20 TIMES.
+  CONCATENATE str str INTO str.
+ENDDO.
+str_len = strlen( str ).
+
+CASE p_input.
+  WHEN 1.
+    PERFORM frm_01.
+  WHEN 2.
+    PERFORM frm_02.
+  WHEN OTHERS.
+    LEAVE PROGRAM.
+ENDCASE.
+
+SORT gt_count BY count DESCENDING.
+READ TABLE gt_count ASSIGNING <fs_count> INDEX 1.
+IF sy-subrc = 0.
+  CONCATENATE '''' <fs_count>-char '''' INTO text.
+  WRITE: 'Maximum Occuring Character:', text.
+  WRITE: / 'Count:', <fs_count>-count.
+ENDIF.
+
+*&---------------------------------------------------------------------*
+*&      Form  FRM_01
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+*  -->  p1        text
+*  <--  p2        text
+*----------------------------------------------------------------------*
+FORM frm_01 .
+
+  CLEAR gt_count[].
+  DO str_len TIMES.
+    READ TABLE gt_count WITH KEY char = str+offset(1)
+    ASSIGNING <fs_count> BINARY SEARCH.
+    IF sy-subrc = 0.
+      <fs_count>-count = <fs_count>-count + 1.
+    ELSE.
+      gw_count-char = str+offset(1).
+      gw_count-count = 1.
+      APPEND gw_count TO gt_count.
+    ENDIF.
+    offset = offset + 1.
+  ENDDO.
+
+ENDFORM.
+*&---------------------------------------------------------------------*
+*&      Form  FRM_02
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+*  -->  p1        text
+*  <--  p2        text
+*----------------------------------------------------------------------*
+FORM frm_02 .
+
+  CLEAR gt_count[].
+  DO str_len TIMES.
+    READ TABLE gt_count WITH KEY char = str+offset(1)
+    BINARY SEARCH TRANSPORTING NO FIELDS.
+    IF sy-subrc <> 0. " count unique character only once
+      FIND ALL OCCURRENCES OF str+offset(1) IN str RESULTS DATA(gt_result).
+      DESCRIBE TABLE gt_result LINES count.
+      CLEAR gw_count.
+      gw_count-char = str+offset(1).
+      gw_count-count = count.
+      APPEND gw_count TO gt_count.
+    ENDIF.
+    offset = offset + 1.
+  ENDDO.
+  CLEAR gt_result[].
+
+ENDFORM.

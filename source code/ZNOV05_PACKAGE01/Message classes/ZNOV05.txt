@@ -1,0 +1,7 @@
+Description	2019-10-11 Nov05 Message Class
+Language	E
+
+Number	Message
+000	& & & &
+001	No value has been found.
+003	100% progress is achieved.

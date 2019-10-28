@@ -1,0 +1,46 @@
+*&---------------------------------------------------------------------*
+*& Report ZNOV05_012_SQL
+*&---------------------------------------------------------------------*
+*& 2019-10-15 Created by Nov05
+*&---------------------------------------------------------------------*
+REPORT znov05_012_new_open_sql.
+
+TYPES: BEGIN OF ty_spfli,
+         connid   TYPE spfli-connid,
+         cityfrom TYPE spfli-cityfrom,
+         cityto   TYPE spfli-cityto,
+       END OF ty_spfli.
+
+DATA: gw_spfli TYPE ty_spfli,
+      gt_spfli TYPE STANDARD TABLE OF ty_spfli.
+FIELD-SYMBOLS: <fs_spfli> TYPE ty_spfli.
+
+DATA: c1 TYPE spfli-carrid VALUE 'LH'.
+
+* if use commas in field list, then you
+* have to escape ABAP variables with @
+SELECT SINGLE connid, cityfrom, cityto
+  INTO @gw_spfli
+  FROM spfli
+  WHERE carrid = @c1
+  .
+WRITE: gw_spfli, /.
+
+SELECT connid, cityfrom, cityto
+  INTO CORRESPONDING FIELDS OF TABLE @gt_spfli
+  FROM spfli
+  WHERE carrid = @c1
+  .
+SELECT *
+  APPENDING CORRESPONDING FIELDS OF TABLE gt_spfli
+  UP TO 1 ROWS
+  FROM spfli
+  WHERE carrid = c1
+  .
+LOOP AT gt_spfli ASSIGNING <fs_spfli>.
+  WRITE / <fs_spfli>.
+
+  AT LAST.
+    WRITE: /, <fs_spfli>.
+  ENDAT.
+ENDLOOP.

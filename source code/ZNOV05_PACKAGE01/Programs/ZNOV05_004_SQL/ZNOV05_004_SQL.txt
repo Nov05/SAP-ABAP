@@ -1,0 +1,36 @@
+*&---------------------------------------------------------------------*
+*& Report ZNOV05_004_SQL
+*&---------------------------------------------------------------------*
+*&
+*&---------------------------------------------------------------------*
+REPORT znov05_004_sql.
+
+DATA: gt_table01 TYPE STANDARD TABLE OF znov05_table01,
+      gw_table01 TYPE znov05_table01.
+FIELD-SYMBOLS <fs_table01> TYPE znov05_table01.
+
+TYPES: BEGIN OF ty_usr21,
+         bname TYPE usr21-bname,
+       END OF ty_usr21.
+DATA: gt_usr21 TYPE STANDARD TABLE OF ty_usr21,
+      gw_usr21 TYPE ty_usr21.
+FIELD-SYMBOLS <fs_usr21> TYPE ty_usr21.
+
+DATA: count TYPE i VALUE 0,
+      str   TYPE string.
+
+SELECT bname FROM usr21 INTO TABLE gt_usr21 UP TO 10 ROWS.
+
+CLEAR gt_table01.
+LOOP AT gt_usr21 ASSIGNING <fs_usr21>.
+  count = count + 1.
+  WRITE: count, <fs_usr21>, /.
+  CLEAR gw_table01.
+  gw_table01-bname = <fs_usr21>-bname.
+  str = |{ CONV string( count ) WIDTH = 10 ALPHA = IN }|.
+  SHIFT str LEFT DELETING LEADING '0'.
+  CONCATENATE 'This is No. ' str ' user.' INTO gw_table01-ltext.
+  APPEND gw_table01 TO gt_table01.
+ENDLOOP.
+
+MODIFY znov05_table01 FROM TABLE gt_table01.

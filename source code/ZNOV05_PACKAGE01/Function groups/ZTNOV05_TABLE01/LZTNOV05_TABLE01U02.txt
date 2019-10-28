@@ -1,0 +1,10 @@
+*---------------------------------------------------------------------*
+*    program for:   TABLEPROC_ZTNOV05_TABLE01
+*   generation date: 11.10.2019 at 05:36:27
+*   view maintenance generator version: #001407#
+*---------------------------------------------------------------------*
+FUNCTION TABLEPROC_ZTNOV05_TABLE01     .
+
+  PERFORM TABLEPROC.
+
+ENDFUNCTION.

@@ -1,0 +1,21 @@
+* regenerated at 11.10.2019 05:36:28
+*******************************************************************
+*   System-defined Include-files.                                 *
+*******************************************************************
+  INCLUDE LZTNOV05_TABLE01TOP.               " Global Declarations
+  INCLUDE LZTNOV05_TABLE01UXX.               " Function Modules
+
+*******************************************************************
+*   User-defined Include-files (if necessary).                    *
+*******************************************************************
+* INCLUDE LZTNOV05_TABLE01F...               " Subroutines
+* INCLUDE LZTNOV05_TABLE01O...               " PBO-Modules
+* INCLUDE LZTNOV05_TABLE01I...               " PAI-Modules
+* INCLUDE LZTNOV05_TABLE01E...               " Events
+* INCLUDE LZTNOV05_TABLE01P...               " Local class implement.
+* INCLUDE LZTNOV05_TABLE01T99.               " ABAP Unit tests
+  INCLUDE LZTNOV05_TABLE01F00                     . " subprograms
+  INCLUDE LZTNOV05_TABLE01I00                     . " PAI modules
+  INCLUDE LSVIMFXX                                . " subprograms
+  INCLUDE LSVIMOXX                                . " PBO modules
+  INCLUDE LSVIMIXX                                . " PAI modules

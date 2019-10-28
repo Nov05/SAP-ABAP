@@ -1,0 +1,66 @@
+*&---------------------------------------------------------------------*
+*& Program ZNOV05_005_PROGRESS
+*&---------------------------------------------------------------------*
+*&
+*&---------------------------------------------------------------------*
+PROGRAM ZNOV05_005_PROGRESS.
+
+*&---------------------------------------------------------------------*
+*&      Form  FRM_SAPGUI_PROGRESS_INDICATOR
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+*  -->  p1        text
+*  <--  p2        text
+*----------------------------------------------------------------------*
+FORM FRM_SAPGUI_PROGRESS_INDICATOR .
+
+  DATA: LV_PERCENTAGE TYPE I, "Progress percentage
+        LV_TEXT       TYPE TEXT40. "Any text
+
+* Progress indicator
+  DO 5 TIMES.
+    LV_PERCENTAGE = LV_PERCENTAGE + 20.
+    IF LV_PERCENTAGE = 100.
+      LV_PERCENTAGE = 99.
+    ENDIF.
+    LV_TEXT = 'We are almost there.'.
+
+    CALL FUNCTION 'SAPGUI_PROGRESS_INDICATOR'
+      EXPORTING
+        PERCENTAGE = LV_PERCENTAGE
+        TEXT       = LV_TEXT.
+
+    WAIT UP TO 1 SECONDS.
+  ENDDO.
+
+ENDFORM.
+*&---------------------------------------------------------------------*
+*&      Module  STATUS_0100  OUTPUT
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+MODULE STATUS_0100 OUTPUT.
+
+  SET PF-STATUS 'Z001'.
+  SET TITLEBAR 'Z001'.
+
+ENDMODULE.
+*&---------------------------------------------------------------------*
+*&      Module  USER_COMMAND_0100  INPUT
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+MODULE USER_COMMAND_0100 INPUT.
+
+  CASE SY-UCOMM.
+    WHEN 'EXECUTE'.
+* Progress indicator
+      PERFORM FRM_SAPGUI_PROGRESS_INDICATOR.
+      MESSAGE I003(ZNOV05). " 100% progress is achieved.
+
+    WHEN 'BACK' OR 'EXIT' OR 'CANCEL'.
+      LEAVE PROGRAM.
+  ENDCASE.
+
+ENDMODULE.

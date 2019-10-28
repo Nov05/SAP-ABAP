@@ -1,0 +1,8 @@
+Text-symbols
+S01	This is a frame.
+S02	This is a text element.
+S03	This is a pushbutton.
+
+Selection-text
+PARAM_01	How many times you clicked
+SEL_01	D       .

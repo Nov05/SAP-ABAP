@@ -1,0 +1,10 @@
+TCTRL_ZNOV05_TABLE01	
+VIM_FRAME_FIELD	____________________________________________________________
+*ZNOV05_TABLE01-BNAME	User
+*ZNOV05_TABLE01-LTEXT	Long Text
+VIM_MARKED	_
+ZNOV05_TABLE01-BNAME	____________
+ZNOV05_TABLE01-LTEXT	________________________________________
+VIM_POSI_PUSH	____________________
+VIM_POSITION_INFO	______________________________
+OK_CODE	____

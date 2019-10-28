@@ -1,32 +1,3 @@
-﻿# ABAP Object Factory Implementation  
-
-This is a simple example of ABAP implementation of factory design. 
-
-1. In Object-Oriented programming, factory design is used to abstract the process of creating objects, so the types of objects created can be specified at runtime.  
-   
-<p align="center">  
-<img src="https://www.abaptutorial.com/wp-content/uploads/2011/05/factorymethod.gif" width=400>  
-<br>  
-<b>Object-Oriented Factory Method Design Pattern UML</b>   
-</p>
-
-2. ABAP interface class is in use in this case.   
- 
-<p align="center">        
-<img src="https://github.com/Nov05/pictures/blob/master/ABAP%20201/2019-10-14%20abap%20factory%20uml.png?raw=true" width=400>
-<br>      
-<b>ABAP Factory Method Design Pattern UML Diagram</b> 
-</p>  
-
-3. This program creats either a `Sales Quotation` object or a `Sales Order` object at runtime.
-
-#### Execution Result   
-
-<img src="https://github.com/Nov05/pictures/blob/master/ABAP%20201/20191014_023743%20ABAP%20Object%20Factory.gif?raw=true">  
-
-# Source Code 
-
-```
 *&---------------------------------------------------------------------*
 *& Report ZNOV05_010_FACTORY
 *&---------------------------------------------------------------------*
@@ -35,7 +6,7 @@ This is a simple example of ABAP implementation of factory design.
 REPORT znov05_010_factory.
 
 *----------------------------------------------------------------------*
-*       CLASS cl_sales_document DEFINITION ABSTRACT
+*       CLASS cl_sales_document DEFINITION
 *----------------------------------------------------------------------*
 * Sale document
 *----------------------------------------------------------------------*
@@ -44,7 +15,7 @@ CLASS cl_sales_document DEFINITION ABSTRACT.
     METHODS: write ABSTRACT.
 ENDCLASS.                    "cl_sales_document DEFINITION
 *----------------------------------------------------------------------*
-*       CLASS cl_quotation  DEFINITION
+*       CLASS cl_quotation  DEFINITIO
 *----------------------------------------------------------------------*
 * Quotation
 *----------------------------------------------------------------------*
@@ -149,15 +120,3 @@ START-OF-SELECTION.
   " create sale document at runtime
   gr_doc = gr_sales_document_factory->create( p_vbtyp ).
   gr_doc->write( ).
-```
-
-Reference:     
-https://www.abaptutorial.com/abap-factory-method-design-pattern/  
-https://answers.sap.com/questions/4237018/returning-value-and-exporting.html  
-```
-To get some values from a method, one can use the EXPORTING, CHANGING or RETURNING parameters.
-If one uses RETURNING parameters, the following restrictions apply:
-(1) No EXPORTING/CHANGING parameters can be used for the method.
-(2) Only one RETURNING parameter can be used.
-(3) RETURNING parameters are only passed by value.
-```  

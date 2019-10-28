@@ -1,0 +1,27 @@
+*&---------------------------------------------------------------------*
+*& Report ZNOV05_016_SQL
+*&---------------------------------------------------------------------*
+*& 2019-10-16 Created by Nov05
+*&---------------------------------------------------------------------*
+REPORT znov05_016_sql.
+
+SELECT manager_id, manager_name
+  FROM zggl_manager
+  WHERE manager_id IN
+  (
+    SELECT manager_id
+    FROM zggl_employee
+    GROUP BY manager_id
+    HAVING SUM( CASE WHEN gender_id = 'FEMALE' THEN 1 ELSE 0 END ) > 0 AND
+           SUM( CASE WHEN gender_id = 'MALE'  THEN 1 ELSE 0 END ) > 0
+  )
+  INTO TABLE @DATA(itab).
+
+* print result
+LOOP AT itab ASSIGNING FIELD-SYMBOL(<fs>).
+  ASSIGN COMPONENT 1 OF STRUCTURE <fs> TO FIELD-SYMBOL(<f1>).
+  ASSIGN COMPONENT 2 OF STRUCTURE <fs> TO FIELD-SYMBOL(<f2>).
+  WRITE: / <f1>, <f2>.
+ENDLOOP.
+* 101001 John Smith
+* 101003 Maggie Roberts

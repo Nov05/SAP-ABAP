@@ -1,0 +1,25 @@
+*&---------------------------------------------------------------------*
+*& Report ZNOV05_008_FUNCTION
+*&---------------------------------------------------------------------*
+*& 2019-10-13 Created by Nov05
+*&---------------------------------------------------------------------*
+REPORT ZNOV05_008_FUNCTION.
+
+DATA: GV_BNAME TYPE USR03-BNAME,
+      GV_NAME1 TYPE USR03-NAME1.
+
+GV_BNAME ='C1156102'.
+
+CALL FUNCTION 'ZNOV05_FM001'
+  EXPORTING
+    I_BNAME   = GV_BNAME
+  IMPORTING
+    E_NAME1   = GV_NAME1
+  EXCEPTIONS
+    NOT_FOUND = 1
+    OTHERS    = 2.
+IF SY-SUBRC <> 0.
+  WRITE 'Oops. Nothing is found.'.
+ELSE.
+  WRITE: GV_BNAME, GV_NAME1.
+ENDIF.

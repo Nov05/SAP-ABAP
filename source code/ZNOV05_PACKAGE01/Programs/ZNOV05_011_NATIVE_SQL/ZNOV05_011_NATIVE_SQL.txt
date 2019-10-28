@@ -1,0 +1,32 @@
+*&---------------------------------------------------------------------*
+*& Report ZNOV05_011_SQL
+*&---------------------------------------------------------------------*
+*& 2019-10-15 Created by Nov05
+*&---------------------------------------------------------------------*
+REPORT znov05_011_native_sql.
+
+DATA: BEGIN OF wa,
+        connid   TYPE spfli-connid,
+        cityfrom TYPE spfli-cityfrom,
+        cityto   TYPE spfli-cityto,
+      END OF wa.
+
+DATA: c1   TYPE spfli-carrid VALUE 'LH',
+      text TYPE string.
+
+* table name and column names have to be in uppercase
+TRY.
+    EXEC SQL PERFORMING loop_output.
+      select CONNID, CITYFROM, CITYTO
+      into :wa
+      from SPFLI
+      where CARRID = :c1
+    ENDEXEC.
+  CATCH cx_root INTO DATA(gr_cx_root).
+    text = gr_cx_root->get_text( ).
+    WRITE: / text.
+ENDTRY.
+
+FORM loop_output.
+  WRITE: / wa-connid, wa-cityfrom, wa-cityto.
+ENDFORM.
